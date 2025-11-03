@@ -1,0 +1,16 @@
+<!-- Botão + script de teste de conexão com Neon via Netlify Functions -->
+<button id="btnNeonTest">Testar conexão Neon</button>
+<pre id="neonOut" style="white-space:pre-wrap;background:#111;color:#eee;padding:12px;border-radius:8px;"></pre>
+<script>
+document.getElementById('btnNeonTest').addEventListener('click', async () => {
+  const out = document.getElementById('neonOut');
+  out.textContent = 'Consultando...';
+  try {
+    const res = await fetch('/.netlify/functions/db');
+    const data = await res.json();
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    out.textContent = 'Erro: ' + e.message;
+  }
+});
+</script>

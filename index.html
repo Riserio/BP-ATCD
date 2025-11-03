@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FILIAL ATCD – Corretoras</title>
+  <style>
+    :root{
+      --brand:#2c50bb;
+      --bg:#f6f8ff;
+      --card:#ffffff;
+      --ink:#121826;
+      --muted:#6b7280;
+      --ok:#10b981; --warn:#f59e0b; --danger:#ef4444; --waiting:#8b5cf6;
+      --radius:16px; --shadow:0 10px 25px rgba(18,24,38,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,#fff,rgba(255,255,255,.7));backdrop-filter:saturate(1.2) blur(6px);border-bottom:1px solid #e5e7eb}
+    .bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 18px}
+    .left,.right{display:flex;gap:8px;align-items:center}
+    h1{font-size:18px;margin:0;display:flex;gap:10px;align-items:center}
+    .badge{background:var(--brand);color:#fff;border-radius:999px;padding:6px 10px;font-weight:600;cursor:pointer}
+    .logo{height:28px;width:auto;cursor:pointer}
+    input[type=search],select,button,.btn{border:1px solid #d1d5db;background:#fff;border-radius:12px;padding:10px 12px}
+    input[type=search]{min-width:280px}
+    button.primary{background:var(--brand);color:#fff;border-color:transparent;box-shadow:var(--shadow)}
+    button.ghost{background:transparent}
+    button:hover{filter:brightness(.98)}
+
+    .wrap{padding:18px}
+    .columns{display:grid;gap:16px;grid-template-columns:repeat(4,minmax(260px,1fr))}
+
+    .col{background:linear-gradient(180deg,#fff,#fafbff);border:1px solid #e5e7eb;border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:60vh;border-top:8px solid var(--col,#e5e7eb)}
+    .col-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eef2ff;background:var(--col-bg,#fff)}
+    .col-title{font-weight:700;display:flex;align-items:center;gap:8px}
+    .col-count{background:#eef2ff;color:var(--brand);padding:4px 8px;border-radius:999px;font-weight:700}
+    .col-body{padding:12px;display:flex;flex-direction:column;gap:10px;min-height:200px}
+
+    .card{background:var(--card);border:1px solid #eef2ff;border-radius:14px;padding:12px;box-shadow:var(--shadow);cursor:grab}
+    .card.dragging{opacity:.5}
+    .card h4{margin:0 0 6px 0;font-size:14px}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+    .tag{padding:3px 8px;border-radius:999px;background:#f3f4f6;border:1px solid #e5e7eb}
+    .prio{font-weight:700}
+    .prio.baixa{color:var(--ok)} .prio.média{color:var(--warn)} .prio.alta{color:var(--danger)}
+
+    .actions{display:flex;gap:6px;margin-top:8px}
+    .actions button{font-size:12px;padding:6px 8px;border-radius:8px}
+
+    .dropzone{border:2px dashed #dbeafe;border-radius:12px;padding:10px;text-align:center;color:#6b7280}
+
+    .color-wrap{display:flex;align-items:center;gap:8px}
+    .color-chip{width:18px;height:18px;border-radius:6px;border:1px solid #cbd5e1;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+    .color-chip.clickable{cursor:pointer}
+    .color-input{appearance:none;width:0;height:0;border:0;padding:0}
+
+    dialog{border:none;border-radius:16px;box-shadow:var(--shadow);width:min(920px,92vw)}
+    form.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field label{font-weight:600;color:#374151}
+    .field input,.field select,.field textarea{border:1px solid #d1d5db;border-radius:10px;padding:10px}
+    .field textarea{min-height:96px}
+    .span-12{grid-column:span 12} .span-8{grid-column:span 8} .span-6{grid-column:span 6} .span-4{grid-column:span 4} .span-3{grid-column:span 3}
+
+    footer small{color:var(--muted)}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+    @media (max-width:1100px){.columns{grid-template-columns:repeat(2,minmax(260px,1fr));}}
+    @media (max-width:640px){.columns{grid-template-columns:1fr} input[type=search]{min-width:unset;width:100%}}
+
+    .login-wrap{position:fixed;inset:0;background:linear-gradient(180deg,#eef2ff,#ffffff);display:none;place-items:center;z-index:50}
+    .login-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:var(--shadow);width:min(420px,92vw);padding:18px;display:flex;flex-direction:column;gap:12px}
+    .login-card h2{margin:0 0 4px 0}
+    .muted{color:#6b7280;font-size:12px}
+    .login-logo{height:38px;width:auto;display:block;margin:0 auto 6px auto}
+    .pwd-wrap{position:relative}
+    .eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:transparent;cursor:pointer;padding:4px}
+    .eye{width:18px;height:18px;display:inline-block}
+
+    .user-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:200px;overflow:auto;border:1px solid #eef2ff;padding:8px;border-radius:10px}
+    .user-item{display:flex;justify-content:space-between;gap:8px}
+
+    #tblCorretoras button[disabled]{opacity:.5; cursor:not-allowed}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="left">
+        <img id="appLogo" src="https://s3.amazonaws.com/bboneapp/Upload/logo/118/1693835269065_capturadetela2023-09-04as10.46.05.png" alt="BP" class="logo" title="Clique para alterar a logo" />
+        <input id="logoInput" type="file" accept="image/*" style="display:none" />
+        <h1>FILIAL ATCD <span id="badgeCorretoras" class="badge" title="Clique para gerenciar a lista de corretoras (CSV/JSON + CRUD)">Corretoras</span></h1>
+        <input id="importCorretoras" type="file" accept=".csv,application/json" style="display:none" />
+      </div>
+      <div class="right toolbar">
+        <input id="search" type="search" placeholder="Buscar por corretora, contato, assunto, tag…" />
+        <select id="filterPrioridade" title="Filtrar por prioridade">
+          <option value="">Todas prioridades</option>
+          <option value="Alta">Alta</option>
+          <option value="Média">Média</option>
+          <option value="Baixa">Baixa</option>
+        </select>
+        <select id="filterResponsavel" title="Filtrar por responsável">
+          <option value="">Todos responsáveis</option>
+        </select>
+        <button class="primary" id="btnAdd">+ Novo atendimento</button>
+        <button id="btnExport">Exportar JSON</button>
+        <button id="btnExportCSV">Exportar CSV</button>
+        <label class="btn" for="importFile" style="cursor:pointer">Importar JSON</label>
+        <input id="importFile" type="file" accept="application/json" style="display:none" />
+        <button id="btnUsers" style="display:none">Usuários</button>
+        <button id="btnLogout">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="columns" id="board"></div>
+    <footer style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
+      <small>Dados salvos automaticamente no seu navegador (localStorage).</small>
+      <div class="toolbar">
+        <button id="btnExemplo" class="ghost">Carregar exemplos</button>
+        <button id="btnZerar" class="ghost" title="Apagar tudo">Limpar quadro</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal de Atendimentos -->
+  <dialog id="modal">
+    <form id="form" method="dialog" class="grid">
+      <h3 class="span-12" style="margin:0 0 6px 0">Cadastro de Atendimento</h3>
+      <input type="hidden" id="id" />
+      <div class="field span-6">
+        <label for="corretora">Corretora *</label>
+        <select id="corretora" required>
+          <option value="" disabled selected>Selecione…</option>
+        </select>
+      </div>
+      <div class="field span-3"><label for="contato">Contato</label><input id="contato" placeholder="Nome do contato" /></div>
+      <div class="field span-3"><label for="canal">Canal</label><select id="canal"><option>WhatsApp</option><option>E-mail</option><option>Telefone</option><option>Reunião</option><option>Outro</option></select></div>
+      <div class="field span-8"><label for="assunto">Assunto *</label><input id="assunto" required placeholder="Ex.: Dúvida sobre taxa de instalação" /></div>
+      <div class="field span-4"><label for="responsavel">Responsável</label><input id="responsavel" placeholder="Preenchido automaticamente" readonly /></div>
+      <div class="field span-12"><label for="descricao">Informações passadas / Detalhes *</label><textarea id="descricao" required placeholder="Resuma aqui todo o alinhamento do atendimento"></textarea></div>
+      <div class="field span-3"><label for="prioridade">Prioridade</label><select id="prioridade"><option>Alta</option><option>Média</option><option selected>Baixa</option></select></div>
+      <div class="field span-3"><label for="proximo">Próximo passo</label><input id="proximo" placeholder="Ex.: enviar proposta" /></div>
+      <div class="field span-3"><label for="follow">Follow-up</label><input id="follow" type="date" /></div>
+      <div class="field span-3"><label for="tags">Tags</label><input id="tags" placeholder="separe por vírgula: api, tabela, MV" /></div>
+      <div class="field span-4"><label for="sla">SLA (dias)</label><input id="sla" type="number" min="0" placeholder="Ex.: 3" /></div>
+      <div class="field span-4"><label for="status">Status</label><select id="status"><option value="novo">Novo</option><option value="andamento">Em andamento</option><option value="aguardando">Aguardando retorno</option><option value="concluido">Concluído</option></select></div>
+      <div class="field span-4"><label for="anexo">Link/Documento</label><input id="anexo" placeholder="URL opcional" /></div>
+      <div class="span-12" style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+        <button type="button" id="btnExcluir" style="display:none">Excluir</button>
+        <button type="button" id="btnDuplicar" style="display:none">Duplicar</button>
+        <button type="button" id="btnCancelar">Cancelar</button>
+        <button class="primary" value="confirm">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal de Usuários -->
+  <dialog id="modalUsers">
+    <form id="formUser" method="dialog" class="grid">
+      <h3 class="span-12" style="margin:0 0 6px 0">Gerenciar Usuários</h3>
+      <input type="hidden" id="u_id" />
+      <div class="field span-6"><label for="u_nome">Nome</label><input id="u_nome" required /></div>
+      <div class="field span-6"><label for="u_email">E-mail (login)</label><input id="u_email" type="email" required /></div>
+      <div class="field span-6"><label for="u_senha">Senha</label><input id="u_senha" type="password" required /></div>
+      <div class="field span-6"><label for="u_perfil">Perfil</label><select id="u_perfil"><option value="comercial">comercial</option><option value="admin">admin</option></select></div>
+
+      <div class="span-12" style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" id="btnNovoUser">Novo</button>
+        <button class="primary" value="confirm" id="btnSalvarUser">Salvar</button>
+      </div>
+
+      <div class="span-12">
+        <div class="user-list" id="userList"></div>
+      </div>
+
+      <div class="span-12" style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+        <button type="button" id="btnFecharUsers">Fechar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal de Corretoras (CRUD + Import) -->
+  <dialog id="modalCorretoras">
+    <form id="formCorretora" method="dialog" class="grid" style="min-width:min(920px,92vw)">
+      <h3 class="span-12" style="margin:0 0 6px 0">Corretoras</h3>
+
+      <div class="span-12" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="buscaCorretora" type="search" placeholder="Buscar por nome ou CNPJ…" style="flex:1 1 240px">
+        <button type="button" id="btnNovaCorretora">+ Nova</button>
+        <button type="button" id="btnImportCorretoras">Importar lista</button>
+        <small class="muted" id="hintPerfilCorretoras"></small>
+      </div>
+
+      <div class="span-12" style="border:1px solid #eef2ff;border-radius:12px">
+        <table id="tblCorretoras" style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f8fafc">
+              <th style="text-align:left;padding:10px;border-bottom:1px solid #e5e7eb">Nome</th>
+              <th style="text-align:left;padding:10px;border-bottom:1px solid #e5e7eb">CNPJ</th>
+              <th style="text-align:right;padding:10px;border-bottom:1px solid #e5e7eb;width:160px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCorretoras"></tbody>
+        </table>
+      </div>
+
+      <div class="field span-6"><label for="c_nome">Nome</label><input id="c_nome" /></div>
+      <div class="field span-4"><label for="c_cnpj">CNPJ</label><input id="c_cnpj" placeholder="somente números ou formatado" /></div>
+      <input type="hidden" id="c_idx" />
+      <div class="span-12" style="display:flex;justify-content:flex-end;gap:8px">
+        <button type="button" id="btnFecharCorretoras">Fechar</button>
+        <button class="primary" id="btnSalvarCorretora">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Overlay de Login -->
+  <div class="login-wrap" id="loginWrap">
+    <div class="login-card">
+      <img id="loginLogo" class="login-logo" alt="Logo" />
+      <h2>Entrar</h2>
+      <p class="muted">Use suas credenciais</p>
+      <div class="field"><label for="l_email">E-mail</label><input id="l_email" type="email" placeholder="ex.: voce@empresa.com" /></div>
+      <div class="field pwd-wrap">
+        <label for="l_senha">Senha</label>
+        <input id="l_senha" type="password" placeholder="••••••" />
+        <button class="eye-btn" type="button" id="btnTogglePwd" title="Mostrar/ocultar senha" aria-label="Mostrar/ocultar senha">
+          <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+        <a href="#" id="lnkForgot" class="muted">Esqueci a senha</a>
+        <button id="btnLogin" class="primary" type="button">Entrar</button>
+      </div>
+      <p class="muted">Dica (demo): <strong>admin / admin</strong> · admin@bp / admin · vendedor@bp / 123</p>
+    </div>
+  </div>
+
+  <script>
+    // ===== Chaves e helpers =====
+    const KEY = 'kanban_corretoras_v1';
+    const KEY_COLORS = 'kanban_corretoras_colors_v1';
+    const KEY_LISTA_CORRETORAS = 'kanban_lista_corretoras_v1';
+    const KEY_USERS = 'kanban_users_v1';
+    const KEY_SESSION = 'kanban_session_v1';
+    const KEY_LOGO = 'kanban_logo_v1';
+    const KEY_RESET = 'kanban_reset_tokens_v1';
+    const $ = s=>document.querySelector(s);
+
+    const initialColumns = [
+      { key:'novo', title:'Novo' },
+      { key:'andamento', title:'Em andamento' },
+      { key:'aguardando', title:'Aguardando retorno' },
+      { key:'concluido', title:'Concluído' },
+    ];
+
+    // ===== Persistência =====
+    let items = load(KEY, []);
+    function load(k, fallback){ try{ return JSON.parse(localStorage.getItem(k)) ?? fallback }catch{ return fallback } }
+    function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+    const defaultColors = { novo:'#e0e7ff', andamento:'#dbeafe', aguardando:'#fff7ed', concluido:'#dcfce7' };
+    let colors = load(KEY_COLORS, {});
+    let listaCorretoras = load(KEY_LISTA_CORRETORAS, []);
+    let users = load(KEY_USERS, []);
+    let session = load(KEY_SESSION, null);
+    let resetTokens = load(KEY_RESET, {});
+
+    // Seed demo users se vazio (inclui admin/admin)
+    if(!Array.isArray(users) || users.length===0){
+      users = [
+        { id: uid(), nome:'Administrador', email:'admin', senha:'admin', perfil:'admin' },
+        { id: uid(), nome:'Administrador', email:'admin@bp', senha:'admin', perfil:'admin' },
+        { id: uid(), nome:'Vendedor', email:'vendedor@bp', senha:'123', perfil:'comercial' },
+      ];
+      save(KEY_USERS, users);
+    }
+
+    // ===== Login / Sessão =====
+    const loginWrap = $('#loginWrap');
+    const loginLogo = $('#loginLogo');
+    const savedLogo = localStorage.getItem(KEY_LOGO);
+    if(savedLogo){ loginLogo.src = savedLogo; loginLogo.style.display='block'; } else { loginLogo.style.display='none'; }
+
+    function getSession(){ return session; }
+    function setSession(sess){ session = sess; save(KEY_SESSION, session); applySessionUI(); render(); }
+    function logout(){ setSession(null); showLogin(true); }
+    function showLogin(show){ loginWrap.style.display = show? 'grid':'none'; }
+
+    function applySessionUI(){
+      const isAdmin = session?.perfil==='admin';
+      $('#btnUsers').style.display = isAdmin? 'inline-block':'none';
+      const resp = $('#responsavel');
+      if(resp){
+        resp.value = session?.nome || '';
+        resp.placeholder = session?.nome || 'Responsável';
+      }
+    }
+
+    // Mostrar/ocultar senha
+    $('#btnTogglePwd').addEventListener('click', ()=>{
+      const inp = $('#l_senha');
+      inp.type = (inp.type === 'password') ? 'text' : 'password';
+    });
+
+    // Esqueci a senha (demo)
+    $('#lnkForgot').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const email = $('#l_email').value.trim();
+      if(!email){ alert('Digite seu e-mail para recuperar a senha.'); return; }
+      const u = users.find(x=>x.email===email);
+      if(!u){ alert('E-mail não encontrado.'); return; }
+      const token = uid()+uid();
+      resetTokens[email] = { token, createdAt: Date.now() };
+      save(KEY_RESET, resetTokens);
+      const subject = encodeURIComponent('Redefinição de senha - FILIAL ATCD');
+      const body = encodeURIComponent(`Olá ${u.nome},
+
+Recebemos uma solicitação de redefinição de senha.
+Token: ${token}
+
+(Demonstração: sem backend; apresente este token ao admin).`);
+      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      alert('Um e-mail foi preparado no seu cliente. Token salvo localmente para conferência (demo).');
+    });
+
+    $('#btnLogin').addEventListener('click', ()=>{
+      const email = $('#l_email').value.trim();
+      const senha = $('#l_senha').value;
+      const u = users.find(x=>x.email===email && x.senha===senha);
+      if(!u){ alert('Credenciais inválidas'); return; }
+      setSession({ id:u.id, nome:u.nome, email:u.email, perfil:u.perfil });
+      showLogin(false);
+    });
+
+    $('#btnLogout').addEventListener('click', logout);
+
+    // Mostrar login se não logado
+    if(!session){ showLogin(true); } else { showLogin(false); }
+
+    // ===== Logo editável =====
+    const logoEl = $('#appLogo');
+    const logoInput = $('#logoInput');
+    if(savedLogo){ logoEl.src = savedLogo; }
+    logoEl.addEventListener('click', ()=> logoInput.click());
+    logoInput.addEventListener('change', async (ev)=>{
+      const f = ev.target.files?.[0]; if(!f) return;
+      const dataUrl = await fileToDataURL(f);
+      logoEl.src = dataUrl;
+      localStorage.setItem(KEY_LOGO, dataUrl);
+      // reflete no login
+      loginLogo.src = dataUrl; loginLogo.style.display='block';
+      ev.target.value='';
+    });
+
+    // ===== Corretoras: select não editável =====
+    function saveListaCorretoras(){ save(KEY_LISTA_CORRETORAS, listaCorretoras); }
+    function renderCorretorasSelect(){
+      const sel = document.getElementById('corretora');
+      if(!sel) return;
+      const cur = sel.value;
+      const head = `<option value="" disabled ${cur ? '' : 'selected'}>Selecione…</option>`;
+      const opts = (listaCorretoras||[])
+        .map(c => {
+          const nome = escapeHtml(c.nome || '');
+          const cnpj = escapeHtml(c.cnpj || '');
+          return `<option value="${nome}">${nome}${cnpj ? ' — ' + cnpj : ''}</option>`;
+        })
+        .join('');
+      sel.innerHTML = head + opts;
+      if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+    }
+
+    // ===== Render / Board =====
+    const board = $('#board');
+    function getVisibleItems(){
+      const sess = getSession();
+      if(!sess) return [];
+      if(sess.perfil === 'admin') return items;
+      return items.filter(it => it.ownerId===sess.id || (it.responsavel||'')===sess.nome);
+    }
+
+    function render(){
+      board.innerHTML = '';
+      const search = ($('#search').value || '').trim().toLowerCase();
+      const fPrio = $('#filterPrioridade').value;
+      const fResp = $('#filterResponsavel').value;
+
+      initialColumns.forEach(col=>{
+        const color = colors[col.key] || defaultColors[col.key] || '#eef2ff';
+        const sec = document.createElement('section');
+        sec.className='col';
+        sec.dataset.status = col.key;
+        sec.style.setProperty('--col', color);
+        sec.style.setProperty('--col-bg', color);
+
+        const sess = getSession();
+        const isAdmin = sess?.perfil === 'admin';
+        const clickableClass = isAdmin ? 'clickable' : '';
+
+        sec.innerHTML = `
+          <div class="col-header">
+            <div class="col-title">${col.title} <span class="col-count" data-count="${col.key}">0</span></div>
+            <div class="color-wrap">
+              <span class="color-chip ${clickableClass}" style="background:${color}" data-colkey="${col.key}" title="${isAdmin?'Clique para alterar a cor':''}"></span>
+              <input type="color" class="color-input" value="${color}" data-colkey="${col.key}" aria-label="Cor da coluna ${col.title}">
+            </div>
+          </div>
+          <div class="col-body" data-drop="${col.key}"></div>
+        `;
+        board.appendChild(sec);
+
+        const body = sec.querySelector('.col-body');
+        body.addEventListener('dragover', ev=>{ ev.preventDefault(); body.classList.add('dropzone'); });
+        body.addEventListener('dragleave', ()=> body.classList.remove('dropzone'));
+        body.addEventListener('drop', ev=>{
+          ev.preventDefault();
+          body.classList.remove('dropzone');
+          const id = ev.dataTransfer.getData('text/plain');
+          moveTo(id, col.key);
+        });
+
+        // Admin pode trocar cores
+        if (isAdmin) {
+          const chip = sec.querySelector('.color-chip');
+          const inp = sec.querySelector('.color-input');
+          chip.addEventListener('click', ()=> inp.click());
+          inp.addEventListener('input', (e)=>{
+            const k = e.target.dataset.colkey;
+            colors[k] = e.target.value;
+            save(KEY_COLORS, colors);
+            render();
+          });
+        }
+
+        const filtered = getVisibleItems().filter(it =>
+          it.status===col.key &&
+          (!search || matches(it, search)) &&
+          (!fPrio || it.prioridade===fPrio) &&
+          (!fResp || (it.responsavel||'')===fResp)
+        );
+
+        sec.querySelector(`[data-count="${col.key}"]`).textContent = filtered.length;
+        filtered.forEach(it => body.appendChild(card(it)));
+      });
+
+      // popular filtro de responsável (apenas visíveis)
+      const responsaveis = ['', ...new Set(getVisibleItems().map(i=>i.responsavel).filter(Boolean))];
+      const sel = $('#filterResponsavel');
+      const cur = sel.value; sel.innerHTML = responsaveis.map(r=>`<option value="${r}">${r || 'Todos responsáveis'}</option>`).join(''); sel.value = cur;
+
+      // atualizar select de corretoras
+      renderCorretorasSelect();
+    }
+
+    function matches(it, q){
+      const tags = Array.isArray(it.tags) ? it.tags.join(' ') : '';
+      const hay = `${it.corretora||''} ${it.contato||''} ${it.assunto||''} ${it.descricao||''} ${tags}`.toLowerCase();
+      return hay.includes(q);
+    }
+
+    function card(it){
+      const el = document.createElement('article');
+      el.className='card'; el.draggable=true; el.dataset.id = it.id;
+      el.addEventListener('dragstart', ev=>{ el.classList.add('dragging'); ev.dataTransfer.setData('text/plain', it.id) });
+      el.addEventListener('dragend', ()=> el.classList.remove('dragging'));
+      const prioClass = {Alta:'alta','Média':'média','Baixa':'baixa'}[it.prioridade||'Baixa'];
+      const overdue = isOverdue(it);
+
+      const tagsView = (Array.isArray(it.tags) && it.tags.length)
+        ? `<span class="tag">#${it.tags.slice(0,2).join(' #')}${it.tags.length>2?'…':''}</span>` : '';
+
+      const contatoView = it.contato ? `<span class="tag">Contato: ${escapeHtml(it.contato)}</span>` : '';
+      const respView    = it.responsavel ? `<span class="tag">Resp.: ${escapeHtml(it.responsavel)}</span>` : '';
+      const followView  = it.follow
+        ? `<span class="tag ${overdue?'prio alta':''}">Follow: ${fmtDate(it.follow)}${overdue?' (atrasado)':''}</span>` : '';
+      const slaView     = it.sla ? `<span class="tag">SLA: ${it.sla}d</span>` : '';
+      const anexoView   = it.anexo ? `<a class="btn" href="${it.anexo}" target="_blank" rel="noopener">Abrir anexo</a>` : '';
+
+      el.innerHTML = `
+        <h4 title="${escapeHtml(it.assunto||'')}">${escapeHtml(it.assunto||'')}</h4>
+        <div class="meta">
+          <span class="tag">${escapeHtml(it.corretora||'')}</span>
+          ${contatoView}
+          ${respView}
+          <span class="tag prio ${prioClass}">Prio: ${it.prioridade||'Baixa'}</span>
+          ${followView}
+          ${slaView}
+          ${tagsView}
+        </div>
+        <p style="margin:8px 0 0 0;color:#374151;white-space:pre-line">${escapeHtml(shorten(it.descricao||'', 220))}</p>
+        <div class="actions">
+          ${anexoView}
+          <button data-act="ver">Abrir</button>
+          <button data-act="avancar">Avançar</button>
+        </div>`;
+      el.querySelectorAll('button').forEach(b=> b.addEventListener('click', (ev)=>{
+        const act = ev.currentTarget.dataset.act; if(act==='ver') openModal(it.id); if(act==='avancar') advance(it.id);
+      }))
+      return el;
+    }
+
+    function isOverdue(it){ if(!it.follow) return false; const d=new Date(it.follow); const t=new Date(); t.setHours(0,0,0,0); return d<t && it.status!=='concluido'; }
+    function fmtDate(v){ try{ return new Date(v).toLocaleDateString('pt-BR') }catch{ return v } }
+
+    function moveTo(id,status){ const i=items.findIndex(x=>x.id===id); if(i<0) return; items[i].status=status; items[i].updatedAt=Date.now(); save(KEY, items); render(); }
+    function advance(id){ const order=['novo','andamento','aguardando','concluido']; const it=items.find(x=>x.id===id); if(!it) return; const idx=Math.min(order.indexOf(it.status)+1,order.length-1); it.status=order[idx]; it.updatedAt=Date.now(); save(KEY, items); render(); }
+
+    // ===== Modal CRUD Atendimentos =====
+    const modal = $('#modal'); const form = $('#form');
+    $('#btnAdd').addEventListener('click', ()=> openModal());
+
+    function openModal(id){
+      if(!getSession()){ showLogin(true); return; }
+      const sess = getSession();
+      const editing = items.find(x=>x.id===id);
+      form.reset();
+      form.querySelector('#id').value = editing? editing.id : '';
+      $('#btnExcluir').style.display = editing? 'inline-block' : 'none';
+      $('#btnDuplicar').style.display = editing? 'inline-block' : 'none';
+
+      // garantir opções de corretora atualizadas
+      renderCorretorasSelect();
+
+      if(editing){
+        ['contato','assunto','descricao','proximo','follow','tags','sla','anexo'].forEach(k=>{
+          const el=form.querySelector('#'+k); if(!el) return; if(k==='tags') el.value=(editing.tags||[]).join(', '); else el.value=editing[k]??'';
+        })
+        form.querySelector('#prioridade').value = editing.prioridade || 'Baixa';
+        form.querySelector('#canal').value = editing.canal || 'WhatsApp';
+        form.querySelector('#status').value = editing.status || 'novo';
+
+        // corretora: se não existir na lista, cria opção temporária
+        const selCor = form.querySelector('#corretora');
+        if (editing.corretora && !listaCorretoras.some(c => c.nome === editing.corretora)) {
+          const opt = document.createElement('option');
+          opt.value = editing.corretora;
+          opt.textContent = editing.corretora + ' (não listada)';
+          selCor.prepend(opt);
+        }
+        selCor.value = editing.corretora || '';
+
+        // responsável: admin pode editar; comercial travado no próprio nome
+        const resp = $('#responsavel');
+        if(sess.perfil==='comercial'){ resp.value = sess.nome; resp.readOnly = true; }
+        else { resp.value = editing.responsavel || ''; resp.readOnly = false; }
+      } else {
+        form.querySelector('#status').value='novo';
+        form.querySelector('#prioridade').value='Baixa';
+        form.querySelector('#canal').value='WhatsApp';
+        // responsável automático
+        const resp = $('#responsavel');
+        resp.value = sess?.nome || '';
+        resp.readOnly = (sess?.perfil==='comercial');
+      }
+      modal.showModal();
+    }
+
+    // Botão Cancelar fecha na hora
+    document.getElementById('btnCancelar')?.addEventListener('click', () => {
+      modal.close('cancel');
+    });
+
+    // Ao confirmar, salva (comercial: força owner/responsável)
+    modal.addEventListener('close', ()=>{
+      if(modal.returnValue==='confirm'){
+        const data = formToObj();
+        if(!data.corretora || !data.assunto || !data.descricao){ alert('Preencha Corretora, Assunto e Informações.'); return modal.showModal(); }
+        const sess = getSession();
+        if(sess?.perfil==='comercial'){
+          data.responsavel = sess.nome;
+        }
+        const id = form.querySelector('#id').value;
+        if(id){
+          const i=items.findIndex(x=>x.id===id);
+          if(i>=0){
+            items[i] = { ...items[i], ...data, updatedAt: Date.now() };
+          }
+        } else {
+          items.unshift({
+            id: uid(),
+            ownerId: sess?.id || null,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            ...data
+          });
+        }
+        save(KEY, items);
+        render();
+      }
+    });
+
+    document.getElementById('btnExcluir').addEventListener('click', ()=>{
+      const id=form.querySelector('#id').value; if(!id) return;
+      if(confirm('Excluir este atendimento?')){
+        items=items.filter(x=>x.id!==id);
+        save(KEY, items);
+        modal.close('confirm');
+        render();
+      }
+    });
+
+    document.getElementById('btnDuplicar').addEventListener('click', ()=>{
+      const id=form.querySelector('#id').value; if(!id) return;
+      const src=items.find(x=>x.id===id); if(!src) return;
+      const sess = getSession();
+      const copy={...src,id:uid(),ownerId:sess?.id||src.ownerId,assunto:src.assunto+' (cópia)',createdAt:Date.now(),updatedAt:Date.now()};
+      items.unshift(copy); save(KEY, items); render(); modal.close('cancel');
+    });
+
+    function formToObj(){
+      const get = id=> (form.querySelector('#'+id)?.value ?? '').trim();
+      const tags = get('tags');
+      return {
+        corretora:get('corretora'),
+        contato:get('contato'),
+        canal:get('canal'),
+        assunto:get('assunto'),
+        responsavel:get('responsavel'),
+        descricao:get('descricao'),
+        prioridade:get('prioridade'),
+        proximo:get('proximo'),
+        follow:get('follow'),
+        tags:tags?tags.split(',').map(s=>s.trim()).filter(Boolean):[],
+        sla:get('sla'),
+        status:form.querySelector('#status').value,
+        anexo:get('anexo')
+      };
+    }
+
+    // ===== Busca & Filtros =====
+    $('#search').addEventListener('input', render);
+    $('#filterPrioridade').addEventListener('change', render);
+    $('#filterResponsavel').addEventListener('change', render);
+
+    // ===== Import/Export (cards) =====
+    $('#btnExport').addEventListener('click', ()=>{
+      const blob=new Blob([JSON.stringify(items,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=Object.assign(document.createElement('a'),{href:url,download:'kanban_corretoras.json'}); a.click();
+      URL.revokeObjectURL(url);
+    });
+    $('#btnExportCSV').addEventListener('click', ()=>{
+      const csv=toCSV(items);
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const a=Object.assign(document.createElement('a'),{href:url,download:'kanban_corretoras.csv'}); a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    function toCSV(rows){
+      const cols=['id','ownerId','createdAt','updatedAt','status','prioridade','corretora','contato','canal','assunto','responsavel','descricao','proximo','follow','sla','tags','anexo'];
+      const head=cols.join(',');
+      const body=rows.map(r=> cols.map(c=> csvCell(c==='tags'?(r[c]||[]).join('|'):r[c])).join(',')).join('\n');
+      return head+'\n'+body;
+    }
+    function csvCell(v){ if(v==null) return ''; const s=String(v).replaceAll('"','""'); if(/[",\n]/.test(s)) return '"'+s+'"'; return s; }
+
+    document.getElementById('importFile').addEventListener('change', async ev=>{
+      const file=ev.target.files[0]; if(!file) return; const text=await file.text();
+      try{
+        const data=JSON.parse(text); if(!Array.isArray(data)) throw new Error('Formato inválido');
+        items=data; save(KEY, items); render();
+      }catch(e){ alert('Arquivo JSON inválido.'); }
+      ev.target.value='';
+    });
+
+    // ===== Corretoras: Modal + CRUD =====
+    const modalCorretoras = document.getElementById('modalCorretoras');
+    const formCorretora  = document.getElementById('formCorretora');
+    const tbodyCorretoras = document.getElementById('tbodyCorretoras');
+
+    // Badge abre modal de Corretoras
+    document.getElementById('badgeCorretoras').addEventListener('click', openCorretorasModal);
+
+    function openCorretorasModal(){
+      const isAdmin = getSession()?.perfil === 'admin';
+      document.getElementById('hintPerfilCorretoras').textContent = isAdmin
+        ? 'Você pode incluir, editar, excluir e importar.'
+        : 'Visualização somente. Para alterar, acesse com um usuário administrador.';
+
+      document.getElementById('btnNovaCorretora').style.display   = isAdmin ? 'inline-block':'none';
+      document.getElementById('btnImportCorretoras').style.display = isAdmin ? 'inline-block':'none';
+
+      formCorretora.reset();
+      document.getElementById('c_idx').value = '';
+      renderCorretorasTable();
+      modalCorretoras.showModal();
+    }
+
+    function renderCorretorasTable(){
+      const q = (document.getElementById('buscaCorretora').value || '').toLowerCase().trim();
+      const isAdmin = getSession()?.perfil === 'admin';
+      const base = (listaCorretoras || []);
+      const rows = base
+        .map((c, idx) => ({...c, _idx: idx}))
+        .filter(c => !q || ( (c.nome||'').toLowerCase().includes(q) || (c.cnpj||'').toLowerCase().includes(q) ));
+
+      tbodyCorretoras.innerHTML = rows.map(r => `
+        <tr>
+          <td style="padding:10px;border-bottom:1px solid #f1f5f9">${escapeHtml(r.nome||'')}</td>
+          <td style="padding:10px;border-bottom:1px solid #f1f5f9">${escapeHtml(r.cnpj||'')}</td>
+          <td style="padding:10px;border-bottom:1px solid #f1f5f9;text-align:right">
+            <button type="button" class="btnEdit" data-idx="${r._idx}" ${isAdmin?'':'disabled'}>Editar</button>
+            <button type="button" class="btnDel"  data-idx="${r._idx}" ${isAdmin?'':'disabled'}>Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbodyCorretoras.querySelectorAll('.btnEdit').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          const idx = +b.dataset.idx;
+          const row = listaCorretoras[idx]; if(!row) return;
+          document.getElementById('c_idx').value = String(idx);
+          document.getElementById('c_nome').value = row.nome || '';
+          document.getElementById('c_cnpj').value = row.cnpj || '';
+        });
+      });
+      tbodyCorretoras.querySelectorAll('.btnDel').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          const idx = +b.dataset.idx;
+          if(confirm('Excluir esta corretora?')){
+            listaCorretoras.splice(idx,1);
+            saveListaCorretoras();
+            renderCorretorasTable();
+            renderCorretorasSelect();
+          }
+        });
+      });
+    }
+
+    document.getElementById('buscaCorretora').addEventListener('input', renderCorretorasTable);
+
+    document.getElementById('btnNovaCorretora').addEventListener('click', ()=>{
+      formCorretora.reset();
+      document.getElementById('c_idx').value = '';
+      document.getElementById('c_nome').focus();
+    });
+
+    document.getElementById('btnImportCorretoras').addEventListener('click', ()=>{
+      if(getSession()?.perfil!=='admin'){ alert('Somente administrador pode importar.'); return; }
+      document.getElementById('importCorretoras').click();
+    });
+
+    document.getElementById('btnFecharCorretoras').addEventListener('click', ()=>{
+      modalCorretoras.close('cancel');
+    });
+
+    document.getElementById('btnSalvarCorretora').addEventListener('click', async (e)=>{
+      e.preventDefault();
+      if(getSession()?.perfil!=='admin'){ alert('Somente administrador pode salvar.'); return; }
+
+      const idx  = document.getElementById('c_idx').value;
+      const nome = (document.getElementById('c_nome').value || '').trim();
+      const cnpj = (document.getElementById('c_cnpj').value || '').trim();
+
+      if(!nome){ alert('Informe o nome.'); return; }
+
+      const rec = { nome, cnpj };
+
+      if(idx){
+        const i = +idx;
+        if(!listaCorretoras[i]){ alert('Registro não encontrado.'); return; }
+        listaCorretoras[i] = rec;
+      }else{
+        listaCorretoras.push(rec);
+      }
+
+      saveListaCorretoras();
+      renderCorretorasTable();
+      renderCorretorasSelect();
+      formCorretora.reset();
+      document.getElementById('c_idx').value = '';
+    });
+
+    // ===== Importar LISTA DE CORRETORAS =====
+    document.getElementById('importCorretoras').addEventListener('change', async ev=>{
+      const file = ev.target.files[0]; if(!file) return;
+      const text = await file.text();
+      try{
+        let data;
+        try{ data = JSON.parse(text); }catch{ data = parseCSVCorretoras(text); }
+        if(!Array.isArray(data)) throw new Error('Estrutura inválida');
+        listaCorretoras = data.map(r=>({nome:(r.nome||r.Nome||'').trim(), cnpj:(r.cnpj||r.CNPJ||'').trim()})).filter(r=>r.nome);
+        saveListaCorretoras();
+        renderCorretorasSelect();
+        if (typeof renderCorretorasTable === 'function') renderCorretorasTable();
+        alert('Lista de corretoras importada com sucesso.');
+      }catch(e){
+        alert('Arquivo inválido. Use CSV com cabeçalho nome,cnpj ou JSON [{"nome":"...", "cnpj":"..."}].');
+      }
+      ev.target.value='';
+    });
+
+    function parseCSVCorretoras(txt){
+      const lines = txt.replace(/\r/g,'').split('\n').filter(Boolean);
+      if(lines.length===0) return [];
+      const sep = (lines[0].includes(';') && !lines[0].includes(',')) ? ';' : ',';
+      const headers = lines[0].split(sep).map(h=>h.trim().toLowerCase());
+      const idxNome = headers.indexOf('nome');
+      const idxCnpj = headers.indexOf('cnpj');
+      return lines.slice(1).map(l=>{
+        const cols = splitCSVLine(l, sep);
+        return { nome: (cols[idxNome]||'').trim(), cnpj: (cols[idxCnpj]||'').trim() };
+      }).filter(r=>r.nome);
+    }
+    function splitCSVLine(line, sep){
+      const out=[]; let cur=''; let q=false;
+      for(let i=0;i<line.length;i++){
+        const ch=line[i];
+        if(ch=='"'){ if(q && line[i+1]=='"'){ cur+='"'; i++; } else { q=!q; } }
+        else if(ch===sep && !q){ out.push(cur); cur=''; }
+        else cur+=ch;
+      }
+      out.push(cur);
+      return out;
+    }
+
+    // ===== Exemplos & Reset =====
+    $('#btnExemplo').addEventListener('click', ()=>{ if(!confirm('Preencher com exemplos? Isso substitui os itens atuais.')) return; items=demo(); save(KEY, items); render(); })
+    $('#btnZerar').addEventListener('click', ()=>{ if(confirm('Limpar todo o quadro?')){ items=[]; save(KEY, items); render(); } })
+
+    function demo(){ const now=Date.now(); return [
+      {id:uid(),ownerId:session?.id||null,createdAt:now-86400000*3,updatedAt:now-86400000*2,status:'novo',prioridade:'Alta',corretora:'MV Corretora',contato:'Ana',canal:'WhatsApp',assunto:'Taxa Instalação GO (o) – dúvidas',responsavel:session?.nome||'Riserio',descricao:'Solicitou esclarecimentos sobre o produto ID 6008. Enviar tabela atualizada e instruções de vinculação no ADM 128.',proximo:'Enviar tabela',follow:new Date(now+86400000).toISOString().slice(0,10),sla:2,tags:['produto','adm128'],anexo:''},
+      {id:uid(),ownerId:session?.id||null,createdAt:now-86400000*5,updatedAt:now-86400000*1,status:'andamento',prioridade:'Média',corretora:'MR Assessoria',contato:'Bruno',canal:'E-mail',assunto:'Erro na cotação – quotation service',responsavel:'Jane',descricao:'Cliente reporta mensagem "There is an error on quotation service" durante multicílculo. Reproduzir e coletar logs.',proximo:'Coletar evidências',follow:new Date(now+86400000*2).toISOString().slice(0,10),sla:3,tags:['agger','hml'],anexo:''},
+      {id:uid(),ownerId:session?.id||null,createdAt:now-86400000*6,updatedAt:now-86400000*3,status:'aguardando',prioridade:'Baixa',corretora:'United Brokers',contato:'Carlos',canal:'Telefone',assunto:'Acesso à plataforma comercial',responsavel:'Marcus',descricao:'Solicitou criação de usuários comerciais e masters. Aguardando documentos.',proximo:'Aguardar docs',follow:new Date(now-86400000*1).toISOString().slice(0,10),sla:5,tags:['plataforma','acesso'],anexo:''},
+      {id:uid(),ownerId:session?.id||null,createdAt:now-86400000*9,updatedAt:now-86400000*1,status:'concluido',prioridade:'Baixa',corretora:'Gama Assessoria',contato:'Paula',canal:'Reunião',assunto:'Vinculação de produto 5155 e 6008',responsavel:'Raphael',descricao:'Incluído produto 6008 nas tabelas com valor R$ 20,00 conforme regra; vinculação por representante será feita pelo usuário.',proximo:'',follow:'',sla:0,tags:['tabela','regra'],anexo:''},
+    ]; }
+
+    // ===== Usuários (CRUD completo) =====
+    const modalUsers = $('#modalUsers');
+    const formUser = $('#formUser');
+    $('#btnUsers').addEventListener('click', ()=>{
+      if(getSession()?.perfil!=='admin') return;
+      formUser.reset();
+      $('#u_id').value = '';
+      renderUserList();
+      modalUsers.showModal();
+    });
+    $('#btnFecharUsers').addEventListener('click', ()=> modalUsers.close('cancel'));
+
+    $('#btnNovoUser').addEventListener('click', ()=>{
+      formUser.reset();
+      $('#u_id').value = '';
+      $('#u_nome').focus();
+    });
+
+    $('#btnSalvarUser').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const id = $('#u_id').value.trim();
+      const nome = $('#u_nome').value.trim();
+      const email = $('#u_email').value.trim();
+      const senha = $('#u_senha').value;
+      const perfil = $('#u_perfil').value;
+      if(!nome || !email || !senha) { alert('Preencha nome, e-mail e senha'); return; }
+
+      if(id){
+        const i = users.findIndex(u=>u.id===id);
+        if(i<0){ alert('Usuário não encontrado.'); return; }
+        if(users.some((u,idx)=> idx!==i && u.email===email)){ alert('Já existe um usuário com este e-mail.'); return; }
+        users[i] = { ...users[i], nome, email, senha, perfil };
+      }else{
+        if(users.some(u=>u.email===email)){ alert('Já existe um usuário com este e-mail.'); return; }
+        users.push({ id:uid(), nome, email, senha, perfil });
+      }
+      save(KEY_USERS, users);
+      renderUserList();
+      alert('Usuário salvo.');
+    });
+
+    function renderUserList(){
+      const box = $('#userList');
+      box.innerHTML = users.map(u=>`
+        <div class="user-item">
+          <span>${escapeHtml(u.nome)} — ${escapeHtml(u.email)} (${u.perfil})</span>
+          <span>
+            <button class="ghost btnEditUser" data-id="${u.id}">Editar</button>
+            <button class="ghost btnDelUser" data-id="${u.id}">Excluir</button>
+          </span>
+        </div>
+      `).join('');
+
+      box.querySelectorAll('.btnEditUser').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = btn.getAttribute('data-id');
+          const u = users.find(x=>x.id===id);
+          if(!u) return;
+          $('#u_id').value = u.id;
+          $('#u_nome').value = u.nome;
+          $('#u_email').value = u.email;
+          $('#u_senha').value = u.senha;
+          $('#u_perfil').value = u.perfil;
+        });
+      });
+
+      box.querySelectorAll('.btnDelUser').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = btn.getAttribute('data-id');
+          if(confirm('Excluir este usuário?')){
+            users = users.filter(u=>u.id!==id);
+            save(KEY_USERS, users);
+            renderUserList();
+          }
+        });
+      });
+    }
+
+    // ===== Utils =====
+    function uid(){ return Math.random().toString(36).slice(2,9); }
+    function escapeHtml(s=''){ return s.replace(/[&<>\"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\'':'&#39;'}[c])) }
+    function shorten(str='',n=160){ return str.length>n? str.slice(0,n-1)+'…' : str }
+    function fileToDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+
+    // ===== Inicialização =====
+    if(!Array.isArray(items) || items.length===0){ items = demo(); save(KEY, items); }
+    applySessionUI();
+    render();
+  </script>
+</body>
+</html>
+
+<!-- ===== API SYNC ADAPTER (preserva layout/fluxo) ===== -->
+<script>
+(function(){
+  // Detect API base: prefer explicit override, then localStorage, then Netlify default
+  const API_BASE = (window.API_BASE_OVERRIDE
+    || localStorage.getItem('api_base')
+    || '/.netlify/functions').replace(/\/+$/,''); // e.g., "/.netlify/functions"
+
+  // Token storage (reusa seu fluxo de login)
+  const TOKEN_KEY = 'kanban_api_token_v1';
+  let token = localStorage.getItem(TOKEN_KEY) || null;
+
+  // Pequena ajuda p/ fetch com token
+  async function api(path, opts={}){
+    const url = path.startsWith('http') ? path : API_BASE + path;
+    const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+    if(token) headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(url, { ...opts, headers });
+    if(!res.ok){
+      const t = await res.text().catch(()=>'');
+      throw new Error('HTTP '+res.status+' '+res.statusText+' — '+t);
+    }
+    const ct = res.headers.get('content-type')||'';
+    return ct.includes('application/json') ? res.json() : res.text();
+  }
+
+  // ========= LOGIN HOOK =========
+  // Se seu código já faz login local, interceptamos o submit e tentamos na API também.
+  const loginForm = document.querySelector('#loginForm');
+  if(loginForm && !loginForm.dataset.apiHooked){
+    loginForm.dataset.apiHooked = '1';
+    loginForm.addEventListener('submit', async (ev)=>{
+      try{
+        const email = (document.querySelector('#l_email')||{}).value?.trim();
+        const password = (document.querySelector('#l_senha')||{}).value;
+        if(!email || !password) return;
+        const sess = await api('/auth_login', { method:'POST', body: JSON.stringify({ email, password }) });
+        if(sess && sess.token){
+          token = sess.token;
+          localStorage.setItem(TOKEN_KEY, token);
+        }
+      }catch(e){
+        console.warn('Login API falhou (seguindo fluxo local)...', e.message);
+      }
+    }, true);
+  }
+
+  // ========= SETTINGS (logo/cores) =========
+  async function syncSettingsToServer(local){
+    try{
+      await api('/settings_set', { method:'POST', body: JSON.stringify(local) });
+    }catch(e){ console.warn('settings_set falhou:', e.message); }
+  }
+  async function loadSettingsFromServer(){
+    try{
+      return await api('/settings_get');
+    }catch(e){ console.warn('settings_get falhou:', e.message); return null; }
+  }
+
+  // Ao carregar, tenta puxar logo/cores do servidor e aplicar no DOM + localStorage
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    try{
+      const srv = await loadSettingsFromServer();
+      if(srv && typeof srv === 'object'){
+        // Exemplo de chaves esperadas: logoUrl, themeVars (mapa de CSS vars)
+        if(srv.logoUrl){
+          const el = document.querySelector('#appLogo, #loginLogo');
+          if(el) el.src = srv.logoUrl;
+          localStorage.setItem('logo_url', srv.logoUrl);
+        }
+        if(srv.themeVars && typeof srv.themeVars === 'object'){
+          const r = document.documentElement;
+          Object.entries(srv.themeVars).forEach(([k,v])=> r.style.setProperty(k, v));
+          localStorage.setItem('theme_vars', JSON.stringify(srv.themeVars));
+        }
+      }
+    }catch{}
+  });
+
+  // Se o seu código já tem algum "salvar logo/cores", intercepte para enviar ao servidor
+  const logoInput = document.querySelector('#logoUpload');
+  if(logoInput && !logoInput.dataset.apiHooked){
+    logoInput.dataset.apiHooked = '1';
+    logoInput.addEventListener('change', ()=>{
+      const url = localStorage.getItem('logo_url');
+      const theme = JSON.parse(localStorage.getItem('theme_vars')||'{}');
+      syncSettingsToServer({ logoUrl: url, themeVars: theme });
+    });
+  }
+
+  // ========= CORRETORAS =========
+  async function fetchBrokers(){ try{ return await api('/corretoras_list'); }catch(e){ console.warn(e); return []; } }
+  async function upsertBroker(b){
+    // b = { id?, nome, cnpj }
+    if(b.id){
+      return api('/corretoras_update', { method:'POST', body: JSON.stringify(b) });
+    }else{
+      return api('/corretoras_insert', { method:'POST', body: JSON.stringify(b) });
+    }
+  }
+  async function deleteBroker(id){ try{ await api('/corretoras_delete', { method:'POST', body: JSON.stringify({ id }) }); }catch(e){ console.warn(e); } }
+
+  // Hook de salvamento quando sua UI salvar corretoras
+  window.__apiSyncBrokers = async function(localList){
+    // localList: array do seu front [{id?, nome, cnpj}, ...]
+    const server = await fetchBrokers();
+    const byNome = new Map(server.map(x => [x.nome, x]));
+    for(const b of localList){
+      const found = byNome.get(b.nome);
+      if(!found){
+        await upsertBroker({ nome:b.nome, cnpj:b.cnpj||null });
+      }else{
+        const needUpd = (found.cnpj||'') !== (b.cnpj||'');
+        if(needUpd){
+          await upsertBroker({ id: found.id, nome:b.nome, cnpj:b.cnpj||null });
+        }
+      }
+    }
+  };
+  window.__apiDeleteBroker = deleteBroker;
+
+  // ========= USUÁRIOS =========
+  async function fetchUsers(){ try{ return await api('/users_list'); }catch(e){ console.warn(e); return []; } }
+  async function upsertUser(u){
+    // u = { id?, name, email, password? }
+    if(u.id){
+      return api('/users_update', { method:'POST', body: JSON.stringify(u) });
+    }else{
+      return api('/users_insert', { method:'POST', body: JSON.stringify(u) });
+    }
+  }
+  async function deleteUser(id){ try{ await api('/users_delete', { method:'POST', body: JSON.stringify({ id }) }); }catch(e){ console.warn(e); } }
+
+  window.__apiSyncUsers = async function(localUsers){
+    const server = await fetchUsers();
+    const byEmail = new Map(server.map(x => [x.email, x]));
+    for(const u of localUsers){
+      const found = byEmail.get(u.email);
+      if(!found){
+        await upsertUser({ name:u.nome||u.name, email:u.email, password:u.senha||u.password||'changeme' });
+      }else{
+        const needUpd = (found.name||'') !== (u.nome||u.name||''); // email é unique
+        if(needUpd){
+          await upsertUser({ id: found.id, name:(u.nome||u.name), email:u.email });
+        }
+      }
+    }
+  };
+  window.__apiDeleteUser = deleteUser;
+
+  // ========= ATENDIMENTOS =========
+  async function fetchItems(){ try{ return await api('/atendimentos_list'); }catch(e){ console.warn(e); return []; } }
+  async function upsertItem(it){
+    // it = { id?, titulo, descricao, status, prioridade, corretora }
+    if(it.id){
+      return api('/atendimentos_update', { method:'POST', body: JSON.stringify(it) });
+    }else{
+      return api('/atendimentos_insert', { method:'POST', body: JSON.stringify(it) });
+    }
+  }
+  async function deleteItem(id){ try{ await api('/atendimentos_delete', { method:'POST', body: JSON.stringify({ id }) }); }catch(e){ console.warn(e); } }
+
+  // Mapa local->server para manter seus IDs
+  const IDMAP_KEY = 'kanban_idmap_atend_v1';
+  let idmap = JSON.parse(localStorage.getItem(IDMAP_KEY)||'{}');
+  function saveMap(){ localStorage.setItem(IDMAP_KEY, JSON.stringify(idmap)); }
+
+  window.__apiSyncItems = async function(localItems){
+    const server = await fetchItems();
+    // tente casar por (titulo, descricao, corretora) para primeira sincronização
+    for(const it of localItems){
+      let sid = idmap[it.id];
+      let payload = {
+        id: sid,
+        titulo: it.titulo||it.assunto||'',
+        descricao: it.descricao||'',
+        status: it.status||it.coluna||'backlog',
+        prioridade: it.prioridade||'Baixa',
+        corretora: it.corretora||it.broker||null
+      };
+      const saved = await upsertItem(payload);
+      if(saved && saved.id){
+        idmap[it.id] = saved.id;
+      }
+    }
+    saveMap();
+  };
+  window.__apiDeleteItem = async function(localId){
+    const sid = idmap[localId];
+    if(sid) await deleteItem(sid);
+  }
+
+  // ========= DND / movimentação =========
+  window.__apiMoveTo = async function(localId, newStatus){
+    const sid = idmap[localId];
+    if(!sid) return;
+    try{
+      await upsertItem({ id: sid, status: newStatus });
+    }catch(e){ console.warn('Falha ao atualizar status no servidor', e.message); }
+  }
+
+  // ========= Integração suave =========
+  // Se o seu código expõe eventos como "onItemsSaved", podemos plugar aqui:
+  window.addEventListener('items:saved', async (ev)=>{
+    const arr = ev.detail || [];
+    try{ await window.__apiSyncItems(arr); }catch{}
+  });
+  window.addEventListener('brokers:saved', async (ev)=>{
+    try{ await window.__apiSyncBrokers(ev.detail||[]); }catch{}
+  });
+  window.addEventListener('users:saved', async (ev)=>{
+    try{ await window.__apiSyncUsers(ev.detail||[]); }catch{}
+  });
+
+  // Exemplo de hooks que você pode chamar do seu código quando excluir algo:
+  // window.__apiDeleteItem(localId);
+  // window.__apiDeleteBroker(serverId);
+  // window.__apiDeleteUser(serverId);
+
+})();
+</script>
