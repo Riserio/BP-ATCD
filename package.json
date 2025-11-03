@@ -1,12 +1,13 @@
 {
-  "name": "atcd-login-neon",
+  "name": "atcd-oficial",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "netlify dev"
+    "build": "echo 'Static build'",
+    "dev": "netlify dev"
   },
   "dependencies": {
-    "pg": "^8.11.3",
+    "pg": "^8.11.5",
     "bcryptjs": "^2.4.3",
     "uuid": "^9.0.1"
   }
