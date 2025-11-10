@@ -1,56 +1,67 @@
+// netlify/functions/_lib/db.js
+const { Client } = require('pg');
 
-const { Pool } = require('pg');
+let clientPromise;
 
-let _pool;
-function getPool(){
-  if(_pool) return _pool;
+/**
+ * Retorna (e mantém) um cliente conectado.
+ */
+async function getClient() {
   const connectionString = process.env.NEON_DB_URL || process.env.DATABASE_URL;
-  if(!connectionString) throw new Error('NEON_DB_URL not set');
-  _pool = new Pool({
-    connectionString,
-    ssl: { rejectUnauthorized: false }
-  });
-  return _pool;
-}
-async function query(sql, params=[]){
-  const pool = getPool();
-  const client = await pool.connect();
-  try{
-    return await client.query(sql, params);
-  } finally {
-    client.release();
+  if (!connectionString) throw new Error('NEON_DB_URL (ou DATABASE_URL) não definida');
+
+  if (!clientPromise) {
+    clientPromise = (async () => {
+      const client = new Client({
+        connectionString,
+        ssl: { rejectUnauthorized: false },
+      });
+      await client.connect();
+      return client;
+    })();
   }
+  return clientPromise;
 }
 
-async function ensureSchema(){
-  // create tables if not exist (id serial for simplicity)
-  await query(`CREATE TABLE IF NOT EXISTS users(
-    id SERIAL PRIMARY KEY,
-    name TEXT,
-    email TEXT UNIQUE,
-    password_hash TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-  );`);
-  await query(`CREATE TABLE IF NOT EXISTS corretoras(
-    id SERIAL PRIMARY KEY,
-    nome TEXT UNIQUE,
-    cnpj TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-  );`);
-  await query(`CREATE TABLE IF NOT EXISTS atendimentos(
-    id SERIAL PRIMARY KEY,
-    titulo TEXT,
-    descricao TEXT,
-    status TEXT,
-    prioridade TEXT,
-    corretora TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-  );`);
-  await query(`CREATE TABLE IF NOT EXISTS settings(
-    key TEXT PRIMARY KEY,
-    value JSONB,
-    updated_at TIMESTAMPTZ DEFAULT now()
-  );`);
+/**
+ * Compatível com 'pg': retorna um objeto com .rows, .rowCount, etc.
+ * Ex.: const { rows } = await query('SELECT 1');
+ */
+async function query(text, params) {
+  const client = await getClient();
+  const res = await client.query(text, params);
+  return res; // <- mantém .rows, .rowCount, etc.
 }
 
-module.exports = { query, ensureSchema };
+/**
+ * Conveniências (opcionais). Use se quiser.
+ */
+async function one(text, params) {
+  const { rows } = await query(text, params);
+  return rows[0] || null;
+}
+
+async function many(text, params) {
+  const { rows } = await query(text, params);
+  return rows;
+}
+
+/**
+ * Coloque aqui suas migrações/tabelas se as Functions chamam ensureSchema().
+ */
+async function ensureSchema() {
+  // Exemplo (idempotente):
+  // await query(`
+  //   CREATE TABLE IF NOT EXISTS users(
+  //     id SERIAL PRIMARY KEY,
+  //     name TEXT NOT NULL,
+  //     email TEXT UNIQUE NOT NULL,
+  //     password_hash TEXT NOT NULL,
+  //     role TEXT DEFAULT 'User',
+  //     created_at TIMESTAMP DEFAULT NOW()
+  //   );
+  // `);
+  return true;
+}
+
+module.exports = { query, one, many, ensureSchema };
