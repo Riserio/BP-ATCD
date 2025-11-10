@@ -1,0 +1,1541 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FILIAL ATCD – Corretoras</title>
+  <style>
+    :root{
+      --brand:#2c50bb;
+      --bg:#f6f8ff;
+      --card:#ffffff;
+      --ink:#121826;
+      --muted:#6b7280;
+      --ok:#10b981; --warn:#f59e0b; --danger:#ef4444; --waiting:#8b5cf6;
+      --radius:16px; --shadow:0 10px 25px rgba(18,24,38,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,#fff,rgba(255,255,255,.7));backdrop-filter:saturate(1.2) blur(6px);border-bottom:1px solid #e5e7eb}
+    .bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 18px}
+    .left,.right{display:flex;gap:8px;align-items:center}
+    h1{font-size:18px;margin:0;display:flex;gap:10px;align-items:center}
+    .badge{background:var(--brand);color:#fff;border-radius:999px;padding:6px 10px;font-weight:600;cursor:pointer}
+    .logo{height:28px;width:auto;cursor:pointer}
+    input[type=search],select,button,.btn{border:1px solid #d1d5db;background:#fff;border-radius:12px;padding:10px 12px}
+    input[type=search]{min-width:280px}
+    button.primary{background:var(--brand);color:#fff;border-color:transparent;box-shadow:var(--shadow)}
+    button.ghost{background:transparent}
+    button:hover{filter:brightness(.98)}
+
+    .wrap{padding:18px}
+    .columns{display:grid;gap:16px;grid-template-columns:repeat(4,minmax(260px,1fr))}
+
+    .col{background:linear-gradient(180deg,#fff,#fafbff);border:1px solid #e5e7eb;border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:60vh;border-top:8px solid var(--col,#e5e7eb)}
+    .col-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eef2ff;background:var(--col-bg,#fff)}
+    .col-title{font-weight:700;display:flex;align-items:center;gap:8px}
+    .col-count{background:#eef2ff;color:var(--brand);padding:4px 8px;border-radius:999px;font-weight:700}
+    .col-body{padding:12px;display:flex;flex-direction:column;gap:10px;min-height:200px}
+
+    .card{background:var(--card);border:1px solid #eef2ff;border-radius:14px;padding:12px;box-shadow:var(--shadow);cursor:grab}
+    .card.dragging{opacity:.5}
+    .card h4{margin:0 0 6px 0;font-size:14px}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+    .tag{padding:3px 8px;border-radius:999px;background:#f3f4f6;border:1px solid #e5e7eb}
+    .prio{font-weight:700}
+    .prio.baixa{color:var(--ok)} .prio.média{color:var(--warn)} .prio.alta{color:var(--danger)}
+
+    .actions{display:flex;gap:6px;margin-top:8px}
+    .actions button{font-size:12px;padding:6px 8px;border-radius:8px}
+
+    .dropzone{border:2px dashed #dbeafe;border-radius:12px;padding:10px;text-align:center;color:#6b7280}
+
+    .color-wrap{display:flex;align-items:center;gap:8px}
+    .color-chip{width:18px;height:18px;border-radius:6px;border:1px solid #cbd5e1;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+    .color-chip.clickable{cursor:pointer}
+    .color-input{appearance:none;width:0;height:0;border:0;padding:0}
+
+    /* === Modais padronizados (95vw/95vh) === */
+    dialog#modal, dialog#modalUsers, dialog#modalCorretoras, dialog#modalTeams, dialog#modalContatos{
+      width:95vw; max-width:95vw; max-height:95vh;
+      border:none; border-radius:20px; padding:0;
+      overflow:hidden; box-shadow:0 25px 50px rgba(0,0,0,.25);
+    }
+    dialog#modal::backdrop, dialog#modalUsers::backdrop, dialog#modalCorretoras::backdrop, dialog#modalTeams::backdrop, dialog#modalContatos::backdrop{
+      background:rgba(0,0,0,.45);
+    }
+    dialog#modal > form.grid, dialog#modalUsers > form.grid, dialog#modalCorretoras > form.grid, dialog#modalTeams > form.grid, dialog#modalContatos > form.grid{
+      padding:14px; overflow:auto; max-height:95vh;
+    }
+
+    dialog{border:none;border-radius:16px;box-shadow:var(--shadow)}
+    form.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field label{font-weight:600;color:#374151}
+    .field input,.field select,.field textarea{border:1px solid #d1d5db;border-radius:10px;padding:10px}
+    .field textarea{min-height:96px}
+    .span-12{grid-column:span 12} .span-8{grid-column:span 8} .span-6{grid-column:span 6} .span-4{grid-column:span 4} .span-3{grid-column:span 3}
+
+    footer small{color:var(--muted)}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+    @media (max-width:1100px){.columns{grid-template-columns:repeat(2,minmax(260px,1fr));}}
+    @media (max-width:640px){.columns{grid-template-columns:1fr} input[type=search]{min-width:unset;width:100%}}
+
+    .login-wrap{position:fixed;inset:0;background:linear-gradient(180deg,#eef2ff,#ffffff);display:none;place-items:center;z-index:50}
+    .login-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:var(--shadow);width:min(420px,92vw);padding:18px;display:flex;flex-direction:column;gap:12px}
+    .login-card h2{margin:0 0 4px 0}
+    .muted{color:#6b7280;font-size:12px}
+    .login-logo{height:38px;width:auto;display:block;margin:0 auto 6px auto}
+    .pwd-wrap{position:relative}
+    .eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:transparent;cursor:pointer;padding:4px}
+    .eye{width:18px;height:18px;display:inline-block}
+
+    .user-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:200px;overflow:auto;border:1px solid #eef2ff;padding:8px;border-radius:10px}
+    .user-item{display:flex;justify-content:space-between;gap:8px}
+
+    #tblCorretoras button[disabled]{opacity:.5; cursor:not-allowed}
+    .hint{font-size:12px;color:#6b7280}
+
+    /* Collapsible sections */
+    .collapsible{border:1px dashed #e5e7eb;border-radius:12px;padding:12px;background:#fafafa;display:none}
+    .collapsible.show{display:block}
+    .toggle-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .toggle-row .left{display:flex;gap:8px;align-items:center}
+    .links{display:flex;gap:8px;flex-wrap:wrap}
+    .linkchip{border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;background:#fff}
+    .addr{color:#374151}
+  
+    /* ===== LISTA (isolada) ===== */
+    .view-toggle{display:flex;gap:6px;align-items:center;border:1px solid #d1d5db;border-radius:12px;padding:3px;background:#fff}
+    .view-toggle button{border:none;padding:8px 10px;border-radius:10px;cursor:pointer}
+    .view-toggle button.active{background:var(--brand);color:#fff;box-shadow:var(--shadow)}
+    #listView{display:none}
+    .list-card{background:var(--card);border:1px solid #eef2ff;border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+    .list-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    table.list{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+    table.list th,table.list td{padding:10px 12px;border-bottom:1px solid #eef2ff;text-align:left;font-size:13px}
+    table.list th{background:#f8fafc;user-select:none;cursor:pointer}
+    table.list tr:hover td{background:#fafcff}
+
+  
+    /* ===== Lista: cores por status (alinhado ao Kanban) ===== */
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid rgba(0,0,0,.06);}
+    .badge .dot{width:8px;height:8px;border-radius:50%}
+    .legend .badge{cursor:pointer}
+    .legend .badge.active{outline:2px solid var(--brand);}
+    /* Mapas de cor – usa as mesmas vars do tema */
+    .status-novo    .dot{background:var(--waiting)}
+    .status-aguardo .dot{background:var(--waiting)}
+    .status-andamento .dot{background:var(--warn)}
+    .status-progresso .dot{background:var(--warn)}
+    .status-resolvido .dot{background:var(--ok)}
+    .status-concluido .dot{background:var(--ok)}
+    .status-fechado .dot{background:var(--ok)}
+    .status-cancelado .dot{background:var(--danger)}
+    .status-erro .dot{background:var(--danger)}
+    /* leve tonalidade na linha inteira conforme status */
+    tr.tint-novo td{background:rgba(139,92,246,.05)}         tr.tint-aguardo td{background:rgba(139,92,246,.05)} /* waiting */
+/* waiting */
+    tr.tint-andamento td, tr.tint-progresso td{background:rgba(245,158,11,.06)} /* warn */
+    tr.tint-concluido td, tr.tint-resolvido td, tr.tint-fechado td{background:rgba(16,185,129,.05)} /* ok */
+    tr.tint-cancelado td, tr.tint-erro td{background:rgba(239,68,68,.05)} /* danger */
+
+  
+
+/* ===== Contatos (CSS apenas; sem alterar JS/HTML) ===== */
+#modalContatos .user-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+#modalContatos .user-item{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:12px;
+  box-shadow: var(--shadow);
+}
+#modalContatos .user-item strong{font-size:15px}
+#modalContatos .user-item .addr{ color:#4b5563; font-size:12px; margin-top:4px }
+#modalContatos .user-item .links{ margin-top:8px; display:flex; gap:8px; flex-wrap:wrap }
+#modalContatos .user-item .linkchip{
+  background:#f3f4f6; border:1px solid #e5e7eb; padding:4px 8px; border-radius:999px; font-size:12px;
+  text-decoration:none; color:inherit;
+}
+#modalContatos .user-item .meta{ display:flex; gap:8px; flex-wrap:wrap; color:#374151; font-size:13px; margin-top:4px }
+#modalContatos .user-item .meta .pill{
+  background:#f9fafb; border:1px solid #e5e7eb; padding:3px 8px; border-radius:999px;
+}
+@media (max-width:640px){
+  #modalContatos .user-item{ padding:10px; border-radius:12px }
+}
+
+</style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="left">
+        <img id="appLogo" src="https://s3.amazonaws.com/bboneapp/Upload/logo/118/1693835269065_capturadetela2023-09-04as10.46.05.png" alt="BP" class="logo" title="Clique para alterar a logo" />
+        <input id="logoInput" type="file" accept="image/*" style="display:none" />
+        <h1>FILIAL ATCD <span id="badgeCorretoras" class="badge" title="Clique para gerenciar a lista de corretoras (CSV/JSON + CRUD)">Corretoras</span></h1>
+        <input id="importCorretoras" type="file" accept=".csv,application/json" style="display:none" />
+      </div>
+      <div class="right toolbar">
+        <div class="view-toggle" title="Alternar entre Cards (Kanban) e Lista">
+          <button id="btnViewCards" type="button" class="active">Cards</button>
+          <button id="btnViewList" type="button">Lista</button>
+        </div>
+
+        <button id="btnContatos" class="btn">Contatos</button>
+        <input id="search" type="search" placeholder="Buscar por corretora, contato, assunto, tag…" />
+        <select id="filterPrioridade" title="Filtrar por prioridade">
+          <option value="">Todas prioridades</option>
+          <option value="Alta">Alta</option>
+          <option value="Média">Média</option>
+          <option value="Baixa">Baixa</option>
+        </select>
+        <select id="filterResponsavel" title="Filtrar por responsável">
+          <option value="">Todos responsáveis</option>
+        </select>
+        <button class="primary" id="btnAdd">+ Novo atendimento</button>
+        <button id="btnExport">Exportar JSON</button>
+        <button id="btnExportCSV">Exportar CSV</button>
+        <label class="btn" for="importFile" style="cursor:pointer">Importar JSON</label>
+        <input id="importFile" type="file" accept="application/json" style="display:none" />
+        <button id="btnUsers" style="display:none">Usuários</button>
+        <button id="btnLogout">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="columns" id="board"></div>
+    
+    <div id="listView" class="list-card">
+      
+      <div class="list-toolbar">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+          <strong>Atendimentos (Lista)</strong> · <span id="listCount">0</span> itens
+          <div class="legend" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+  <span class="badge status-novo" data-k="novo"><span class="dot"></span>Novo</span>
+  <span class="badge status-andamento" data-k="andamento"><span class="dot"></span>Em andamento</span>
+  <span class="badge status-aguardo" data-k="aguardo"><span class="dot"></span>Aguardando retorno</span>
+  <span class="badge status-concluido" data-k="concluido"><span class="dot"></span>Concluído</span>
+</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center">
+          <label for="listFilterStatus" class="muted" style="font-size:12px">Status:</label>
+          <select id="listFilterStatus" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:8px">
+  <option value="">Todos</option>
+  <option value="novo">Novo</option>
+  <option value="andamento">Em andamento</option>
+  <option value="aguardo">Aguardando retorno</option>
+  <option value="concluido">Concluído</option>
+</select>
+        </div>
+      </div>
+      <div class="table-wrap" style="overflow:auto">
+
+        <table class="list" id="tblList">
+          <thead>
+            <tr>
+              <th data-k="assunto">Assunto</th>
+              <th data-k="corretora">Corretora</th>
+              <th data-k="contato">Contato</th>
+              <th data-k="responsavel">Responsável</th>
+              <th data-k="retorno">Prioridade</th>
+              <th data-k="status">Criado</th>
+              <th data-k="status">status</th>
+              <th data-k="status">equipe</th>
+              <th data-k="ações">ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyList"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
+      <div class="toolbar">
+        <button id="btnExemplo" class="ghost">Carregar exemplos</button>
+        <button id="btnZerar" class="ghost" title="Apagar tudo">Limpar quadro</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal de Atendimentos -->
+  <dialog id="modal">
+    <form id="form" method="dialog" class="grid">
+      <h3 class="span-12" style="margin:0 0 6px 0">Cadastro de Atendimento</h3>
+      <input type="hidden" id="id" />
+      <div class="field span-6">
+        <label for="corretora">Corretora *</label>
+        <select id="corretora" required>
+          <option value="" disabled selected>Selecione…</option>
+        </select>
+      </div>
+      <div class="field span-3"><label for="contato">Contato</label><input id="contato" placeholder="Nome do contato" /></div>
+      <div class="field span-3"><label for="canal">Canal</label><select id="canal"><option>WhatsApp</option><option>E-mail</option><option>Telefone</option><option>Reunião</option><option>Outro</option></select></div>
+      <div class="field span-8"><label for="assunto">Assunto *</label><input id="assunto" required placeholder="Ex.: Dúvida sobre taxa de instalação" /></div>
+      <div class="field span-4"><label for="responsavel">Responsável</label><input id="responsavel" placeholder="Preenchido automaticamente" readonly /></div>
+      <div class="field span-12"><label for="descricao">Informações passadas / Detalhes *</label><textarea id="descricao" required placeholder="Resuma aqui todo o alinhamento do atendimento"></textarea></div>
+      <div class="field span-3"><label for="prioridade">Prioridade</label><select id="prioridade"><option>Alta</option><option>Média</option><option selected>Baixa</option></select></div>
+      <div class="field span-3"><label for="proximo">Próximo passo</label><input id="proximo" placeholder="Ex.: enviar proposta" /></div>
+      <div class="field span-3"><label for="follow">Follow-up</label><input id="follow" type="date" /></div>
+      <div class="field span-3"><label for="tags">Tags</label><input id="tags" placeholder="separe por vírgula: api, tabela, MV" /></div>
+      <div class="field span-4"><label for="sla">SLA (dias)</label><input id="sla" type="number" min="0" placeholder="Ex.: 3" /></div>
+      <div class="field span-4"><label for="status">Status</label><select id="status"><option value="novo">Novo</option><option value="andamento">Em andamento</option><option value="aguardando">Aguardando retorno</option><option value="concluido">Concluído</option></select></div>
+      <div class="field span-4"><label for="anexo">Link/Documento</label><input id="anexo" placeholder="URL opcional" /></div>
+      <div class="span-12" style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+        <button type="button" id="btnExcluir" style="display:none">Excluir</button>
+        <button type="button" id="btnDuplicar" style="display:none">Duplicar</button>
+        <button type="button" id="btnCancelar">Cancelar</button>
+        <button class="primary" value="confirm">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal de Usuários (com recolhível) -->
+  <dialog id="modalUsers">
+    <form id="formUser" method="dialog" class="grid">
+      <h3 class="span-12" style="margin:0 0 6px 0">Gerenciar Usuários</h3>
+
+      <div class="span-12 toggle-row">
+        <div class="left" style="flex:1">
+          <input id="u_busca" type="search" placeholder="Buscar usuário..." style="width:100%">
+        </div>
+        <div class="right">
+          <button type="button" id="btnToggleUser" aria-expanded="false" aria-controls="userFields">Novo</button>
+          <button type="button" id="btnTeamsModal" class="btn">Criar equipe</button>
+        </div>
+      </div>
+
+      <div id="userFields" class="collapsible span-12" aria-hidden="true">
+        <input type="hidden" id="u_id" />
+        <div class="field span-6"><label for="u_nome">Nome</label><input id="u_nome" required /></div>
+        <div class="field span-6"><label for="u_email">E-mail (login)</label><input id="u_email" type="email" required /></div>
+        <div class="field span-6"><label for="u_senha">Senha</label><input id="u_senha" type="password" required /></div>
+        <div class="field span-6"><label for="u_perfil">Perfil</label>
+          <select id="u_perfil">
+            <option value="admin">Admin</option>
+            <option value="lider">Líder</option>
+            <option value="comercial">Comercial</option>
+          </select>
+        </div>
+
+        <div class="field span-6" id="u_lider_wrap" style="display:none">
+          <label for="u_lider">Líder (para Comercial)</label>
+          <select id="u_lider"></select>
+        </div>
+        <div class="field span-6" id="u_teams_wrap" style="display:none">
+          <label for="u_teams">Equipes</label>
+          <select id="u_teams" multiple size="4"></select>
+          <div class="hint">Use CTRL/CMD para selecionar mais de uma equipe.</div>
+        </div>
+
+        <div class="span-12" style="display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="btnNovoUser">Limpar</button>
+          <button class="primary" value="confirm" id="btnSalvarUser" type="button">Salvar</button>
+        </div>
+      </div>
+
+      <div class="span-12">
+        <div class="user-list" id="userList"></div>
+      </div>
+
+      <div class="span-12" style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+        <button type="button" id="btnFecharUsers">Fechar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal de Equipes (com recolhível) -->
+  <dialog id="modalTeams">
+    <form id="formTeams" method="dialog" class="grid">
+      <h3 class="span-12" style="margin:0 0 6px 0">Equipes</h3>
+
+      <div class="span-12 toggle-row">
+        <div class="left" style="flex:1">
+          <input id="t_busca" type="search" placeholder="Buscar equipe..." style="width:100%">
+        </div>
+        <div class="right">
+          <button type="button" id="btnToggleTeam" aria-expanded="false" aria-controls="teamFields">Nova</button>
+        </div>
+      </div>
+
+      <div id="teamFields" class="collapsible span-12" aria-hidden="true">
+        <input type="hidden" id="t_id" />
+        <div class="field span-6">
+          <label for="t_nome">Nome da equipe</label>
+          <input id="t_nome" placeholder="Ex.: Equipe Norte" required />
+        </div>
+        <div class="field span-6">
+          <label for="t_lider">Líder responsável</label>
+          <select id="t_lider"></select>
+        </div>
+        <div class="span-12" style="display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="btnNovaTeam">Limpar</button>
+          <button class="primary" value="confirm" id="btnSalvarTeam" type="button">Salvar</button>
+        </div>
+      </div>
+
+      <div class="span-12">
+        <div class="user-list" id="teamList"></div>
+      </div>
+      <div class="span-12" style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+        <button type="button" id="btnFecharTeams">Fechar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal de Corretoras (collapsible) -->
+  <dialog id="modalCorretoras">
+    <form id="formCorretora" method="dialog" class="grid" style="min-width:min(920px,92vw)">
+      <h3 class="span-12" style="margin:0 0 6px 0">Corretoras</h3>
+
+      <div class="span-12 toggle-row">
+        <div class="left" style="flex:1">
+          <input id="buscaCorretora" type="search" placeholder="Buscar por nome ou CNPJ…" style="width:100%">
+        </div>
+        <div class="right">
+          <button type="button" id="btnToggleCorretora" aria-expanded="false" aria-controls="corretoraFields">Nova</button>
+          <button type="button" id="btnImportCorretoras">Importar lista</button>
+        </div>
+      </div>
+
+      <div id="corretoraFields" class="collapsible span-12" aria-hidden="true">
+        <div class="field span-6"><label for="c_nome">Nome</label><input id="c_nome" /></div>
+        <div class="field span-4"><label for="c_cnpj">CNPJ</label><input id="c_cnpj" placeholder="somente números ou formatado" /></div>
+        <input type="hidden" id="c_idx" />
+        <div class="span-12" style="display:flex;justify-content:flex-end;gap:8px">
+          <button type="button" id="btnNovaCorretora">Limpar</button>
+          <button class="primary" id="btnSalvarCorretora" type="button">Salvar</button>
+        </div>
+      </div>
+
+      <div class="span-12" style="border:1px solid #eef2ff;border-radius:12px">
+        <table id="tblCorretoras" style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f8fafc">
+              <th style="text-align:left;padding:10px;border-bottom:1px solid #e5e7eb">Nome</th>
+              <th style="text-align:left;padding:10px;border-bottom:1px solid #e5e7eb">CNPJ</th>
+              <th style="text-align:right;padding:10px;border-bottom:1px solid #e5e7eb;width:160px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCorretoras"></tbody>
+        </table>
+      </div>
+
+      <div class="span-12" style="display:flex;justify-content:flex-end;gap:8px">
+        <button type="button" id="btnFecharCorretoras">Fechar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal de Contatos (ATUALIZADO: inclui endereço + redes sociais, recolhível) -->
+  <dialog id="modalContatos">
+    <form id="formContatos" method="dialog" class="grid">
+      <h3 class="span-12" style="margin:0 0 6px 0">Contatos</h3>
+
+      <div class="span-12 toggle-row">
+        <div class="left" style="flex:1">
+          <input id="ctt_busca" type="search" placeholder="Buscar contato..." style="width:100%">
+        </div>
+        <div class="right">
+          <button type="button" id="btnToggleContato" aria-expanded="false" aria-controls="contatoFields">Novo</button>
+        </div>
+      </div>
+
+      <div id="contatoFields" class="collapsible span-12" aria-hidden="true">
+        <input type="hidden" id="ctt_id" />
+        <div class="field span-4"><label for="ctt_nome">Nome</label><input id="ctt_nome"/></div>
+        <div class="field span-4"><label for="ctt_email">E-mail</label><input id="ctt_email" type="email"/></div>
+        <div class="field span-4"><label for="ctt_tel">Telefone</label><input id="ctt_tel"/></div>
+
+        <div class="field span-6">
+          <label for="ctt_corretora">Corretora</label>
+          <select id="ctt_corretora"></select>
+        </div>
+        <div class="field span-6">
+          <label for="ctt_endereco">Endereço</label>
+          <input id="ctt_endereco" placeholder="Rua, nº, bairro, cidade/UF, CEP" />
+        </div>
+
+        <div class="field span-3"><label for="ctt_instagram">Instagram</label><input id="ctt_instagram" placeholder="@usuario ou URL"/></div>
+        <div class="field span-3"><label for="ctt_facebook">Facebook</label><input id="ctt_facebook" placeholder="página ou URL"/></div>
+        <div class="field span-3"><label for="ctt_linkedin">LinkedIn</label><input id="ctt_linkedin" placeholder="perfil/empresa ou URL"/></div>
+        <div class="field span-3"><label for="ctt_site">Site</label><input id="ctt_site" placeholder="https://"/></div>
+
+        <div class="field span-12">
+          <label for="ctt_obs">Observações</label>
+          <input id="ctt_obs"/>
+        </div>
+
+        <div class="span-12" style="display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" id="btnNovoContato">Limpar</button>
+          <button class="primary" value="confirm" id="btnSalvarContato" type="button">Salvar</button>
+        </div>
+      </div>
+
+      <div class="span-12">
+        <div class="user-list" id="contatosList"></div>
+      </div>
+      <div class="span-12" style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+        <button type="button" id="btnFecharContatos">Fechar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Overlay de Login -->
+  <div class="login-wrap" id="loginWrap">
+    <div class="login-card">
+      <img id="loginLogo" class="login-logo" alt="Logo" />
+      <h2>Entrar</h2>
+      <p class="muted">Use suas credenciais</p>
+      <div class="field"><label for="l_email">E-mail</label><input id="l_email" type="email" placeholder="ex.: voce@empresa.com" /></div>
+      <div class="field pwd-wrap">
+        <label for="l_senha">Senha</label>
+        <input id="l_senha" type="password" placeholder="••••••" />
+        <button class="eye-btn" type="button" id="btnTogglePwd" title="Mostrar/ocultar senha" aria-label="Mostrar/ocultar senha">
+          <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+        <a href="#" id="lnkForgot" class="muted">Esqueci a senha</a>
+        <button id="btnLogin" class="primary" type="button">Entrar</button>
+      </div>
+      <p class="muted">Dica (demo): <strong>admin / admin</strong> · admin@bp / admin · vendedor@bp / 123</p>
+    </div>
+  </div>
+
+  <script>
+    // ===== Helpers/Base =====
+    const KEY = 'kanban_corretoras_v1';
+    const KEY_COLORS = 'kanban_corretoras_colors_v1';
+    const KEY_LISTA_CORRETORAS = 'kanban_lista_corretoras_v1';
+    const KEY_USERS = 'kanban_users_v2';
+    const KEY_TEAMS = 'kanban_teams_v1';
+    const KEY_SESSION = 'kanban_session_v1';
+    const KEY_LOGO = 'kanban_logo_v1';
+    const KEY_RESET = 'kanban_reset_tokens_v1';
+    const KEY_CONTATOS = 'kanban_contatos_v1';
+    const $ = s=>document.querySelector(s);
+
+    const initialColumns = [
+      { key:'novo', title:'Novo' },
+      { key:'andamento', title:'Em andamento' },
+      { key:'aguardando', title:'Aguardando retorno' },
+      { key:'concluido', title:'Concluído' },
+    ];
+
+    function uid(){ return Math.random().toString(36).slice(2,10); }
+    function load(k, fb){ try{ return JSON.parse(localStorage.getItem(k)) ?? fb }catch{ return fb } }
+    function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+    function shorten(s, n){ s=s||''; return s.length>n? s.slice(0,n-1)+'…': s; }
+    function fileToDataURL(file){ return new Promise((res)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(file); }); }
+
+    // ===== Persistência =====
+    let items = load(KEY, []);
+    const defaultColors = { novo:'#e0e7ff', andamento:'#dbeafe', aguardando:'#fff7ed', concluido:'#dcfce7' };
+    let colors = load(KEY_COLORS, {});
+    let listaCorretoras = load(KEY_LISTA_CORRETORAS, []);
+    let users = load(KEY_USERS, []);
+    let teams = load(KEY_TEAMS, []);
+    let session = load(KEY_SESSION, null);
+    let resetTokens = load(KEY_RESET, {});
+    let contatos = load(KEY_CONTATOS, []);
+
+    // Seed demo users/teams se vazio
+    if(!Array.isArray(users) || users.length===0){
+      const adminId = uid();
+      const liderId = uid();
+      const teamA = { id: uid(), nome:'Equipe Norte', liderId };
+      const teamB = { id: uid(), nome:'Equipe Sul', liderId };
+      users = [
+        { id: adminId, nome:'Administrador', email:'admin', senha:'admin', perfil:'admin' },
+        { id: liderId, nome:'Líder Exemplo', email:'lider@bp', senha:'123', perfil:'lider', teamIds:[teamA.id, teamB.id] },
+        { id: uid(), nome:'Vendedor', email:'vendedor@bp', senha:'123', perfil:'comercial', leaderId: liderId, teamIds:[teamA.id] },
+      ];
+      teams = [teamA, teamB];
+      save(KEY_USERS, users);
+      save(KEY_TEAMS, teams);
+    }
+
+    // ===== Login / Sessão =====
+    const loginWrap = $('#loginWrap');
+    const loginLogo = $('#loginLogo');
+    const savedLogo = localStorage.getItem(KEY_LOGO);
+    if(savedLogo){ loginLogo.src = savedLogo; loginLogo.style.display='block'; } else { loginLogo.style.display='none'; }
+
+    function getSession(){ return session; }
+    function setSession(sess){ session = sess; save(KEY_SESSION, session); applySessionUI(); render(); }
+    function logout(){ setSession(null); showLogin(true); }
+    function showLogin(show){ loginWrap.style.display = show? 'grid':'none'; }
+
+    function applySessionUI(){
+      const isAdmin = session?.perfil==='admin';
+      $('#btnUsers').style.display = isAdmin? 'inline-block':'none';
+      const resp = $('#responsavel');
+      if(resp){
+        resp.value = session?.nome || '';
+        resp.placeholder = session?.nome || 'Responsável';
+      }
+    }
+
+    // Mostrar/ocultar senha
+    $('#btnTogglePwd').addEventListener('click', ()=>{
+      const inp = $('#l_senha');
+      inp.type = (inp.type === 'password') ? 'text' : 'password';
+    });
+
+    // Esqueci a senha (demo)
+    $('#lnkForgot').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const email = $('#l_email').value.trim();
+      if(!email){ alert('Digite seu e-mail para recuperar a senha.'); return; }
+      const u = users.find(x=>x.email===email);
+      if(!u){ alert('E-mail não encontrado.'); return; }
+      const token = uid()+uid();
+      resetTokens[email] = { token, createdAt: Date.now() };
+      save(KEY_RESET, resetTokens);
+      const subject = encodeURIComponent('Redefinição de senha - FILIAL ATCD');
+      const body = encodeURIComponent(`Olá ${u.nome},\n\nRecebemos uma solicitação de redefinição de senha.\nToken: ${token}\n\n(Demonstração: sem backend; apresente este token ao admin).`);
+      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      alert('Um e-mail foi preparado no seu cliente. Token salvo localmente para conferência (demo).');
+    });
+
+    $('#btnLogin').addEventListener('click', ()=>{
+      const email = $('#l_email').value.trim();
+      const senha = $('#l_senha').value;
+      const u = users.find(x=>x.email===email && x.senha===senha);
+      if(!u){ alert('Credenciais inválidas'); return; }
+      setSession({ id:u.id, nome:u.nome, email:u.email, perfil:u.perfil });
+      showLogin(false);
+    });
+
+    $('#btnLogout').addEventListener('click', logout);
+    if(!session){ showLogin(true); } else { showLogin(false); }
+
+    // ===== Logo editável =====
+    const logoEl = $('#appLogo');
+    const logoInput = $('#logoInput');
+    if(savedLogo){ logoEl.src = savedLogo; }
+    logoEl.addEventListener('click', ()=> logoInput.click());
+    logoInput.addEventListener('change', async (ev)=>{
+      const f = ev.target.files?.[0]; if(!f) return;
+      const dataUrl = await fileToDataURL(f);
+      logoEl.src = dataUrl;
+      localStorage.setItem(KEY_LOGO, dataUrl);
+      loginLogo.src = dataUrl; loginLogo.style.display='block';
+      ev.target.value='';
+    });
+
+    // ===== Corretoras: select
+
+    // Importar lista de corretoras (CSV/JSON)
+    document.getElementById('btnImportCorretoras').addEventListener('click', ()=>{
+      const inp = document.getElementById('importCorretoras');
+      if(inp) inp.click();
+    });
+    document.getElementById('importCorretoras').addEventListener('change', (ev)=>{
+      const f = ev.target.files?.[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          let data = [];
+          if(f.name.toLowerCase().endsWith('.json')){
+            data = JSON.parse(reader.result);
+          }else{
+            const rows = String(reader.result).split(/\r?\n/).filter(Boolean);
+            for(const r of rows){
+              const [nome,cnpj=''] = r.split(',').map(s=>s.trim());
+              if(nome) data.push({nome, cnpj});
+            }
+          }
+          if(Array.isArray(data)){
+            listaCorretoras = data.filter(x=>x && x.nome);
+            save(KEY_LISTA_CORRETORAS, listaCorretoras);
+            renderCorretorasSelect();
+            if(typeof renderCorretorasTable === 'function') renderCorretorasTable(document.getElementById('buscaCorretora')?.value||'');
+            alert('Lista de corretoras importada.');
+          }else{
+            alert('Formato inválido.');
+          }
+        }catch(e){ alert('Erro ao importar: '+e.message); }
+      };
+      reader.readAsText(f);
+    });
+            function saveListaCorretoras(){ save(KEY_LISTA_CORRETORAS, listaCorretoras); }
+    function renderCorretorasSelect(){
+      const sel = document.getElementById('corretora');
+      const selCtt = document.getElementById('ctt_corretora');
+      const head = `<option value="" disabled selected>Selecione…</option>`;
+      const opts = (listaCorretoras||[]).map(c => {
+        const nome = escapeHtml(c.nome || '');
+        const cnpj = escapeHtml(c.cnpj || '');
+        return `<option value="${nome}">${nome}${cnpj ? ' — ' + cnpj : ''}</option>`;
+      }).join('');
+      if(sel){
+        const cur = sel.value;
+        sel.innerHTML = head + opts;
+        if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+      }
+      if(selCtt){
+        const head2 = `<option value="" selected>—</option>`;
+        const cur2 = selCtt.value;
+        selCtt.innerHTML = head2 + opts;
+        if (cur2 && [...selCtt.options].some(o => o.value === cur2)) selCtt.value = cur2;
+      }
+    }
+
+    // ===== Equipes (Teams) =====
+    function renderLeadersOptions(selectEl){
+      const leaders = users.filter(u=>u.perfil==='lider');
+      selectEl.innerHTML = leaders.map(l=>`<option value="${l.id}">${escapeHtml(l.nome)}</option>`).join('');
+    }
+    function renderTeamsList(filterText=''){
+      const list = $('#teamList'); if(!list) return;
+      list.innerHTML='';
+      const txt = (filterText||'').toLowerCase();
+      teams
+        .filter(t=>!txt || t.nome.toLowerCase().includes(txt))
+        .forEach(t=>{
+          const lider = users.find(u=>u.id===t.liderId);
+          const div = document.createElement('div');
+          div.className='user-item';
+          div.innerHTML = `<div><strong>${escapeHtml(t.nome)}</strong> — Líder: ${escapeHtml(lider?.nome||'—')}</div>
+                           <div><button data-edit="${t.id}">Editar</button> <button data-del="${t.id}">Excluir</button></div>`;
+          list.appendChild(div);
+        });
+      list.querySelectorAll('button[data-edit]').forEach(b=>b.addEventListener('click',()=> {openTeam(b.dataset.edit); ensureExpanded('btnToggleTeam','teamFields',true);} ));
+      list.querySelectorAll('button[data-del]').forEach(b=>b.addEventListener('click',()=> deleteTeam(b.dataset.del)));
+    }
+    function openTeam(id){
+      const t = teams.find(x=>x.id===id);
+      if(!t) return;
+      $('#t_id').value = t.id;
+      $('#t_nome').value = t.nome;
+      renderLeadersOptions($('#t_lider'));
+      $('#t_lider').value = t.liderId || '';
+    }
+    function deleteTeam(id){
+      if(!confirm('Remover esta equipe?')) return;
+      teams = teams.filter(t=>t.id!==id);
+      // remover vínculo das pessoas
+      users = users.map(u=> ({...u, teamIds:(u.teamIds||[]).filter(tid=>tid!==id)}));
+      save(KEY_TEAMS, teams); save(KEY_USERS, users);
+      renderTeamsList($('#t_busca').value);
+      renderUsersList($('#u_busca').value);
+      hydrateDynamicUserFields();
+    }
+
+    // ===== Usuários =====
+    function hydrateDynamicUserFields(){
+      const perfil = $('#u_perfil').value;
+      // Mostrar combos conforme perfil
+      $('#u_lider_wrap').style.display = (perfil==='comercial') ? '' : 'none';
+      $('#u_teams_wrap').style.display  = (perfil==='lider' || perfil==='comercial') ? '' : 'none';
+
+      // Popular líderes e equipes
+      renderLeadersOptions($('#u_lider'));
+      const teamsEl = $('#u_teams');
+      let availableTeams = teams.slice();
+      if(perfil==='comercial'){
+        const lid = $('#u_lider').value;
+        if(lid) availableTeams = teams.filter(t=>t.liderId===lid);
+      }
+      teamsEl.innerHTML = availableTeams.map(t=>`<option value="${t.id}">${escapeHtml(t.nome)}</option>`).join('');
+    }
+
+    function userRow(u){
+      const perfil = u.perfil;
+      const leader = u.leaderId ? users.find(x=>x.id===u.leaderId)?.nome : null;
+      const tnames = (u.teamIds||[]).map(id=> teams.find(t=>t.id===id)?.nome).filter(Boolean).join(', ') || '—';
+      return `<div class="user-item">
+        <div><strong>${escapeHtml(u.nome)}</strong> — ${perfil}${leader? ' · Líder: '+escapeHtml(leader):''} · Equipes: ${escapeHtml(tnames)}</div>
+        <div>
+          <button data-edit="${u.id}">Editar</button>
+          <button data-del="${u.id}">Excluir</button>
+        </div>
+      </div>`;
+    }
+    function renderUsersList(filterText=''){
+      const box = $('#userList'); if(!box) return;
+      const txt = (filterText||'').toLowerCase();
+      box.innerHTML = users
+        .filter(u=>!txt || (u.nome.toLowerCase().includes(txt) || (u.email||'').toLowerCase().includes(txt)))
+        .map(userRow).join('');
+      box.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click',()=>{
+        openUser(b.dataset.edit);
+        ensureExpanded('btnToggleUser','userFields',true);
+        hydrateDynamicUserFields();
+      }));
+      box.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click',()=> deleteUser(b.dataset.del)));
+    }
+    function openUser(id){
+      const u = users.find(x=>x.id===id);
+      if(!u) return;
+      $('#u_id').value = u.id;
+      $('#u_nome').value = u.nome || '';
+      $('#u_email').value = u.email || '';
+      $('#u_senha').value = u.senha || '';
+      $('#u_perfil').value = u.perfil || 'comercial';
+      hydrateDynamicUserFields();
+      if(u.perfil==='comercial' && u.leaderId) $('#u_lider').value = u.leaderId;
+      hydrateDynamicUserFields();
+      const teamsEl = $('#u_teams');
+      const setSelected = new Set(u.teamIds||[]);
+      [...teamsEl.options].forEach(o=> o.selected = setSelected.has(o.value));
+    }
+    function deleteUser(id){
+      if(!confirm('Remover este usuário?')) return;
+      users = users.filter(u=>u.id!==id);
+      save(KEY_USERS, users);
+      renderUsersList($('#u_busca').value);
+    }
+
+    // Toggle helpers
+    function toggleSection(btnId, panelId){
+      const btn = document.getElementById(btnId);
+      const panel = document.getElementById(panelId);
+      const expand = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', expand);
+      panel.classList.toggle('show', expand);
+      panel.setAttribute('aria-hidden', !expand);
+      btn.textContent = expand ? 'Recolher' : 'Novo';
+      if(expand){
+        const focusable = panel.querySelector('input,select,textarea,button');
+        if(focusable) focusable.focus();
+      }
+    }
+    function ensureExpanded(btnId, panelId, expand){
+      const btn = document.getElementById(btnId);
+      const panel = document.getElementById(panelId);
+      const cur = btn.getAttribute('aria-expanded') === 'true';
+      if(cur !== expand){ toggleSection(btnId, panelId); }
+    }
+
+    // Handlers modal usuários
+    $('#btnUsers').addEventListener('click', ()=> { document.getElementById('modalUsers').showModal(); renderUsersList(); hydrateDynamicUserFields(); ensureExpanded('btnToggleUser','userFields',false); });
+    $('#btnFecharUsers').addEventListener('click', ()=> document.getElementById('modalUsers').close());
+    $('#btnNovoUser').addEventListener('click', ()=> { $('#u_id').value=''; $('#formUser').reset(); hydrateDynamicUserFields(); });
+    $('#u_perfil').addEventListener('change', hydrateDynamicUserFields);
+    $('#u_lider').addEventListener('change', hydrateDynamicUserFields);
+    $('#u_busca').addEventListener('input', e=> renderUsersList(e.target.value));
+    document.getElementById('btnToggleUser').addEventListener('click', ()=> toggleSection('btnToggleUser','userFields'));
+
+    $('#btnSalvarUser').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const id = $('#u_id').value || uid();
+      const nome = $('#u_nome').value.trim();
+      const email = $('#u_email').value.trim();
+      const senha = $('#u_senha').value;
+      const perfil = $('#u_perfil').value;
+      if(!nome || !email || !senha){ alert('Preencha nome, e-mail e senha.'); return; }
+
+      // impedir e-mail duplicado
+      const collision = users.find(u=>u.email===email && u.id !== $('#u_id').value);
+      if(collision){ alert('Já existe usuário com este e-mail.'); return; }
+
+      let leaderId = undefined;
+      let teamIds = [];
+      if(perfil==='comercial'){
+        leaderId = $('#u_lider').value || undefined;
+        if(!leaderId){ alert('Selecione o Líder do Comercial.'); return; }
+      }
+      // Coletar teams selecionadas (líder e comercial podem ter múltiplas)
+      const teamsEl = $('#u_teams');
+      teamIds = [...teamsEl.selectedOptions].map(o=>o.value);
+
+      // Limpeza conforme perfil
+      if(perfil==='admin'){ leaderId = undefined; teamIds = []; }
+      if(perfil==='lider'){ leaderId = undefined; }
+
+      const exists = users.find(u=>u.id===id);
+      const payload = { id, nome, email, senha, perfil, leaderId, teamIds };
+      if(exists){
+        Object.assign(exists, payload);
+      }else{
+        users.push(payload);
+      }
+      save(KEY_USERS, users);
+      renderUsersList($('#u_busca').value);
+      alert('Usuário salvo.');
+    });
+
+    // ===== Modal Equipes =====
+    document.getElementById('btnToggleTeam').addEventListener('click', ()=> toggleSection('btnToggleTeam','teamFields'));
+    $('#btnTeamsModal').addEventListener('click', ()=>{
+      renderLeadersOptions($('#t_lider'));
+      renderTeamsList();
+      document.getElementById('modalTeams').showModal();
+      ensureExpanded('btnToggleTeam','teamFields',false);
+    });
+    $('#btnFecharTeams').addEventListener('click', ()=> document.getElementById('modalTeams').close());
+    $('#btnNovaTeam').addEventListener('click', ()=> { $('#t_id').value=''; $('#formTeams').reset(); renderLeadersOptions($('#t_lider')); });
+    $('#t_busca').addEventListener('input', e=> renderTeamsList(e.target.value));
+    $('#btnSalvarTeam').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const id = $('#t_id').value || uid();
+      const nome = $('#t_nome').value.trim();
+      const liderId = $('#t_lider').value || undefined;
+      if(!nome){ alert('Informe um nome de equipe'); return; }
+      const exists = teams.find(t=>t.id===id);
+      if(exists){ Object.assign(exists, {nome, liderId}); }
+      else { teams.push({id, nome, liderId}); }
+      if(liderId){
+        const lider = users.find(u=>u.id===liderId);
+        if(lider){
+          const set = new Set(lider.teamIds||[]); set.add(id);
+          lider.teamIds = [...set];
+          save(KEY_USERS, users);
+        }
+      }
+      save(KEY_TEAMS, teams);
+      renderTeamsList($('#t_busca').value);
+      hydrateDynamicUserFields();
+      alert('Equipe salva.');
+    });
+
+    // ===== Contatos (ATUALIZADO) =====
+    function linkChip(label, urlOrHandle){
+      if(!urlOrHandle) return '';
+      let url = urlOrHandle.trim();
+      if(!url) return '';
+      if(url.startswith){  // safety if older engines
+        pass
+      }
+      const isHandle = url[0] === '@';
+      if(isHandle){
+        url = 'https://instagram.com/' + url.slice(1);
+      }else if(!/^https?:\/\//i.test(url)){
+        url = 'https://' + url;
+      }
+      return `<a class="linkchip" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`;
+    }
+
+    $('#btnContatos').addEventListener('click', ()=>{
+      renderCorretorasSelect();
+      renderContatosList();
+      document.getElementById('modalContatos').showModal();
+      ensureExpanded('btnToggleContato','contatoFields',false);
+    });
+    $('#btnFecharContatos').addEventListener('click', ()=> document.getElementById('modalContatos').close());
+    $('#btnNovoContato').addEventListener('click', ()=> { $('#formContatos').reset(); });
+    $('#ctt_busca').addEventListener('input', ()=> renderContatosList($('#ctt_busca').value));
+    document.getElementById('btnToggleContato').addEventListener('click', ()=> toggleSection('btnToggleContato','contatoFields'));
+    $('#btnSalvarContato').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const nome = $('#ctt_nome').value.trim();
+      const email = $('#ctt_email').value.trim();
+      const tel = $('#ctt_tel').value.trim();
+      const corretora = $('#ctt_corretora').value || '';
+      const endereco = $('#ctt_endereco').value.trim();
+      const instagram = $('#ctt_instagram').value.trim();
+      const facebook = $('#ctt_facebook').value.trim();
+      const linkedin = $('#ctt_linkedin').value.trim();
+      const site = $('#ctt_site').value.trim();
+      const obs = $('#ctt_obs').value.trim();
+      if(!nome){ alert('Informe o nome do contato'); return; }
+      contatos.push({ id: uid(), nome, email, tel, corretora, endereco, instagram, facebook, linkedin, site, obs });
+      save(KEY_CONTATOS, contatos);
+      renderContatosList($('#ctt_busca').value);
+      alert('Contato salvo.');
+    });
+
+    function renderContatosList(filterText=''){
+      const box = $('#contatosList'); if(!box) return;
+      const txt = (filterText||'').toLowerCase();
+      box.innerHTML = '';
+      contatos
+        .filter(c=>!txt || (c.nome?.toLowerCase().includes(txt) || (c.email||'').toLowerCase().includes(txt) || (c.corretora||'').toLowerCase().includes(txt) || (c.endereco||'').toLowerCase().includes(txt)))
+        .forEach(c=>{
+          const links = [
+            linkChip('Instagram', c.instagram),
+            linkChip('Facebook', c.facebook),
+            linkChip('LinkedIn', c.linkedin),
+            linkChip('Site', c.site),
+          ].filter(Boolean).join(' ');
+
+          const addr = c.endereco ? `<div class="addr">${escapeHtml(c.endereco)}</div>` : '';
+
+          const div = document.createElement('div');
+          div.className='user-item';
+          div.innerHTML = `<div>
+              <strong>${escapeHtml(c.nome)}</strong> — ${escapeHtml(c.email||'—')} — ${escapeHtml(c.tel||'—')} · ${escapeHtml(c.corretora||'')}
+              ${addr}
+              <div class="links">${links}</div>
+            </div>
+            <div><button data-del="${c.id}">Excluir</button></div>`;
+          box.appendChild(div);
+        });
+      box.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', ()=>{
+        if(!confirm('Excluir contato?')) return;
+        contatos = contatos.filter(x=>x.id!==b.dataset.del);
+        save(KEY_CONTATOS, contatos);
+        renderContatosList($('#ctt_busca').value);
+      }));
+    }
+
+    // ===== Corretoras =====
+
+    // Importar lista de corretoras (CSV/JSON)
+    document.getElementById('btnImportCorretoras').addEventListener('click', ()=>{
+      const inp = document.getElementById('importCorretoras');
+      if(inp) inp.click();
+    });
+    document.getElementById('importCorretoras').addEventListener('change', (ev)=>{
+      const f = ev.target.files?.[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          let data = [];
+          if(f.name.toLowerCase().endsWith('.json')){
+            data = JSON.parse(reader.result);
+          }else{
+            const rows = String(reader.result).split(/\r?\n/).filter(Boolean);
+            for(const r of rows){
+              const [nome,cnpj=''] = r.split(',').map(s=>s.trim());
+              if(nome) data.push({nome, cnpj});
+            }
+          }
+          if(Array.isArray(data)){
+            listaCorretoras = data.filter(x=>x && x.nome);
+            save(KEY_LISTA_CORRETORAS, listaCorretoras);
+            renderCorretorasSelect();
+            if(typeof renderCorretorasTable === 'function') renderCorretorasTable(document.getElementById('buscaCorretora')?.value||'');
+            alert('Lista de corretoras importada.');
+          }else{
+            alert('Formato inválido.');
+          }
+        }catch(e){ alert('Erro ao importar: '+e.message); }
+      };
+      reader.readAsText(f);
+    });
+            document.getElementById('btnToggleCorretora').addEventListener('click', ()=> toggleSection('btnToggleCorretora','corretoraFields'));
+    $('#badgeCorretoras').addEventListener('click', ()=>{
+      document.getElementById('modalCorretoras').showModal();
+      renderCorretorasTable();
+      ensureExpanded('btnToggleCorretora','corretoraFields',false);
+    });
+    $('#btnFecharCorretoras').addEventListener('click', ()=> document.getElementById('modalCorretoras').close());
+    $('#buscaCorretora').addEventListener('input', ()=> renderCorretorasTable($('#buscaCorretora').value));
+    $('#btnNovaCorretora').addEventListener('click', ()=> { $('#c_idx').value=''; $('#c_nome').value=''; $('#c_cnpj').value=''; });
+    $('#btnSalvarCorretora').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const nome = $('#c_nome').value.trim(); if(!nome){ alert('Informe um nome'); return; }
+      const cnpj = $('#c_cnpj').value.trim();
+      const idx = $('#c_idx').value;
+      if(idx){
+        const i = +idx; if(listaCorretoras[i]){ listaCorretoras[i].nome = nome; listaCorretoras[i].cnpj = cnpj; }
+      }else{
+        listaCorretoras.push({nome, cnpj});
+      }
+      saveListaCorretoras(); renderCorretorasTable($('#buscaCorretora').value); renderCorretorasSelect();
+    });
+    function renderCorretorasTable(filterText=''){
+      const tb = document.getElementById('tbodyCorretoras'); if(!tb) return;
+      const txt=(filterText||'').toLowerCase();
+      tb.innerHTML = '';
+      listaCorretoras
+        .map((c, i)=> ({...c, i}))
+        .filter(c=> !txt || (c.nome||'').toLowerCase().includes(txt) || (c.cnpj||'').toLowerCase().includes(txt))
+        .forEach(c=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="padding:10px;border-bottom:1px solid #eef2ff">${escapeHtml(c.nome||'')}</td>
+            <td style="padding:10px;border-bottom:1px solid #eef2ff">${escapeHtml(c.cnpj||'')}</td>
+            <td style="padding:10px;border-bottom:1px solid #eef2ff;text-align:right">
+              <button data-edit="${c.i}">Editar</button>
+              <button data-del="${c.i}">Excluir</button>
+            </td>`;
+          tb.appendChild(tr);
+        });
+      tb.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{
+        const i = +b.dataset.edit; const c = listaCorretoras[i];
+        $('#c_idx').value=i; $('#c_nome').value=c?.nome||''; $('#c_cnpj').value=c?.cnpj||'';
+        ensureExpanded('btnToggleCorretora','corretoraFields',true);
+      }));
+      tb.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', ()=>{
+        const i = +b.dataset.del;
+        if(!confirm('Excluir corretora?')) return;
+        listaCorretoras.splice(i,1);
+        saveListaCorretoras(); renderCorretorasTable($('#buscaCorretora').value); renderCorretorasSelect();
+      }));
+    }
+
+    // ===== Board / Kanban ===== (inalterado)
+    const board = $('#board');
+    function getVisibleItems(){
+      const sess = getSession();
+      if(!sess) return [];
+      if(sess.perfil === 'admin') return items;
+      if(sess.perfil === 'lider'){
+        const myTeams = new Set((users.find(u=>u.id===sess.id)?.teamIds)||[]);
+        return items.filter(it => (it.teamId && myTeams.has(it.teamId)) || (it.responsavel||'')===sess.nome || it.ownerId===sess.id );
+      }
+      const me = users.find(u=>u.id===sess.id);
+      const myTeams = new Set(me?.teamIds||[]);
+      return items.filter(it => it.ownerId===sess.id || (it.responsavel||'')===sess.nome || (it.teamId && myTeams.has(it.teamId)));
+    }
+
+    function render(){
+      board.innerHTML = '';
+      const search = ($('#search').value || '').trim().toLowerCase();
+      const fPrio = $('#filterPrioridade').value;
+      const fResp = $('#filterResponsavel').value;
+
+      initialColumns.forEach(col=>{
+        const color = colors[col.key] || defaultColors[col.key] || '#eef2ff';
+        const sec = document.createElement('section');
+        sec.className='col';
+        sec.dataset.status = col.key;
+        sec.style.setProperty('--col', color);
+        sec.style.setProperty('--col-bg', color);
+
+        const sess = getSession();
+        const isAdmin = sess?.perfil === 'admin';
+        const clickableClass = isAdmin ? 'clickable' : '';
+
+        sec.innerHTML = `
+          <div class="col-header">
+            <div class="col-title">${col.title} <span class="col-count" data-count="${col.key}">0</span></div>
+            <div class="color-wrap">
+              <span class="color-chip ${clickableClass}" style="background:${color}" data-colkey="${col.key}" title="${isAdmin?'Clique para alterar a cor':''}"></span>
+              <input type="color" class="color-input" value="${color}" data-colkey="${col.key}" aria-label="Cor da coluna ${col.title}">
+            </div>
+          </div>
+          <div class="col-body" data-drop="${col.key}"></div>
+        `;
+        board.appendChild(sec);
+
+        const body = sec.querySelector('.col-body');
+        body.addEventListener('dragover', ev=>{ ev.preventDefault(); body.classList.add('dropzone'); });
+        body.addEventListener('dragleave', ()=> body.classList.remove('dropzone'));
+        body.addEventListener('drop', ev=>{
+          ev.preventDefault();
+          body.classList.remove('dropzone');
+          const id = ev.dataTransfer.getData('text/plain');
+          moveTo(id, col.key);
+        });
+
+        if (isAdmin) {
+          const chip = sec.querySelector('.color-chip');
+          const inp = sec.querySelector('.color-input');
+          chip.addEventListener('click', ()=> inp.click());
+          inp.addEventListener('input', (e)=>{
+            const k = e.target.dataset.colkey;
+            colors[k] = e.target.value;
+            save(KEY_COLORS, colors);
+            render();
+          });
+        }
+
+        const filtered = getVisibleItems().filter(it =>
+          it.status===col.key &&
+          (!search || matches(it, search)) &&
+          (!fPrio || it.prioridade===fPrio) &&
+          (!fResp || (it.responsavel||'')===fResp)
+        );
+
+        sec.querySelector(`[data-count="${col.key}"]`).textContent = filtered.length;
+        filtered.forEach(it => body.appendChild(card(it)));
+      });
+
+      const responsaveis = ['', ...new Set(getVisibleItems().map(i=>i.responsavel).filter(Boolean))];
+      const sel = $('#filterResponsavel');
+      const cur = sel.value; sel.innerHTML = responsaveis.map(r=>`<option value="${r}">${r || 'Todos responsáveis'}</option>`).join(''); sel.value = cur;
+
+      renderCorretorasSelect();
+    }
+
+    function matches(it, q){
+      const tags = Array.isArray(it.tags) ? it.tags.join(' ') : '';
+      const hay = `${it.corretora||''} ${it.contato||''} ${it.assunto||''} ${it.descricao||''} ${tags}`.toLowerCase();
+      return hay.includes(q);
+    }
+
+    function card(it){
+      const el = document.createElement('article');
+      el.className='card'; el.draggable=true; el.dataset.id = it.id;
+      el.addEventListener('dragstart', ev=>{ el.classList.add('dragging'); ev.dataTransfer.setData('text/plain', it.id) });
+      el.addEventListener('dragend', ()=> el.classList.remove('dragging'));
+      const prioClass = {Alta:'alta','Média':'média','Baixa':'baixa'}[it.prioridade||'Baixa'];
+      const overdue = isOverdue(it);
+
+      const tagsView = (Array.isArray(it.tags) && it.tags.length)
+        ? `<span class="tag">#${it.tags.slice(0,2).join(' #')}${it.tags.length>2?'…':''}</span>` : '';
+
+      const contatoView = it.contato ? `<span class="tag">Contato: ${escapeHtml(it.contato)}</span>` : '';
+      const respView    = it.responsavel ? `<span class="tag">Resp.: ${escapeHtml(it.responsavel)}</span>` : '';
+      const followView  = it.follow
+        ? `<span class="tag ${overdue?'prio alta':''}">Follow: ${fmtDate(it.follow)}${overdue?' (atrasado)':''}</span>` : '';
+      const slaView     = it.sla ? `<span class="tag">SLA: ${it.sla}d</span>` : '';
+      const anexoView   = it.anexo ? `<a class="btn" href="${it.anexo}" target="_blank" rel="noopener">Abrir anexo</a>` : '';
+
+      const teamName = it.teamId ? (teams.find(t=>t.id===it.teamId)?.nome || '') : '';
+      const teamView = teamName ? `<span class="tag">Equipe: ${escapeHtml(teamName)}</span>` : '';
+
+      el.innerHTML = `
+        <h4 title="${escapeHtml(it.assunto||'')}">${escapeHtml(it.assunto||'')}</h4>
+        <div class="meta">
+          <span class="tag">${escapeHtml(it.corretora||'')}</span>
+          ${contatoView}
+          ${respView}
+          ${teamView}
+          <span class="tag prio ${prioClass}">Prio: ${it.prioridade||'Baixa'}</span>
+          ${followView}
+          ${slaView}
+          ${tagsView}
+        </div>
+        <p style="margin:8px 0 0 0;color:#374151;white-space:pre-line">${escapeHtml(shorten(it.descricao||'', 220))}</p>
+        <div class="actions">
+          ${anexoView}
+          <button data-act="ver">Abrir</button>
+          <button data-act="avancar">Avançar</button>
+        </div>`;
+      el.querySelectorAll('button').forEach(b=> b.addEventListener('click', (ev)=>{
+        const act = ev.currentTarget.dataset.act; if(act==='ver') openModal(it.id); if(act==='avancar') advance(it.id);
+      }))
+      return el;
+    }
+
+    function isOverdue(it){ if(!it.follow) return false; const d=new Date(it.follow); const t=new Date(); t.setHours(0,0,0,0); return d<t && it.status!=='concluido'; }
+    function fmtDate(v){ try{ return new Date(v).toLocaleDateString('pt-BR') }catch{ return v } }
+
+    function moveTo(id,status){ const i=items.findIndex(x=>x.id===id); if(i<0) return; items[i].status=status; items[i].updatedAt=Date.now(); save(KEY, items); render(); }
+    function advance(id){ const order=['novo','andamento','aguardando','concluido']; const it=items.find(x=>x.id===id); if(!it) return; const idx=Math.min(order.indexOf(it.status)+1,order.length-1); it.status=order[idx]; it.updatedAt=Date.now(); save(KEY, items); render(); }
+
+    // ===== Modal CRUD Atendimentos =====
+    const modal = $('#modal'); const form = $('#form');
+    $('#btnAdd').addEventListener('click', ()=> openModal());
+
+    function openModal(id){
+      if(!getSession()){ showLogin(true); return; }
+      const sess = getSession();
+      const editing = items.find(x=>x.id===id);
+      form.reset();
+      form.querySelector('#id').value = editing? editing.id : '';
+      $('#btnExcluir').style.display = editing? 'inline-block' : 'none';
+      $('#btnDuplicar').style.display = editing? 'inline-block' : 'none';
+
+      renderCorretorasSelect();
+
+      if(editing){
+        ['contato','assunto','descricao','proximo','follow','tags','sla','anexo'].forEach(k=>{
+          const el=form.querySelector('#'+k); if(!el) return; if(k==='tags') el.value=(editing.tags||[]).join(', '); else el.value=editing[k]??'';
+        })
+        form.querySelector('#prioridade').value = editing.prioridade || 'Baixa';
+        form.querySelector('#canal').value = editing.canal || 'WhatsApp';
+        form.querySelector('#status').value = editing.status || 'novo';
+
+        const selCor = form.querySelector('#corretora');
+        if (editing.corretora && !listaCorretoras.some(c => c.nome === editing.corretora)) {
+          const opt = document.createElement('option');
+          opt.value = editing.corretora;
+          opt.textContent = editing.corretora + ' (não listada)';
+          selCor.prepend(opt);
+        }
+        selCor.value = editing.corretora || '';
+      }
+
+      const resp = $('#responsavel');
+      if(sess.perfil==='comercial'){
+        resp.readOnly = true; resp.value = sess.nome;
+      }else{
+        resp.readOnly = false; resp.value = editing?.responsavel || (sess?.nome||'');
+      }
+
+      let teamSelect = form.querySelector('#teamId');
+      if(!teamSelect){
+        const box = document.createElement('div');
+        box.className = 'field span-6';
+        box.innerHTML = `<label for="teamId">Equipe (opcional)</label><select id="teamId"><option value="">—</option></select>`;
+        form.insertBefore(box, form.querySelector('.span-12'));
+        teamSelect = box.querySelector('#teamId');
+      }
+      const me = users.find(u=>u.id===sess.id);
+      let availableTeams = teams.slice();
+      if(sess.perfil==='lider'){ availableTeams = teams.filter(t=> (me?.teamIds||[]).includes(t.id)); }
+      if(sess.perfil==='comercial'){ availableTeams = teams.filter(t=> (me?.teamIds||[]).includes(t.id)); }
+      teamSelect.innerHTML = `<option value="">—</option>` + availableTeams.map(t=>`<option value="${t.id}">${escapeHtml(t.nome)}</option>`).join('');
+      if(editing?.teamId) teamSelect.value = editing.teamId;
+
+      modal.showModal();
+    }
+
+    $('#btnCancelar').addEventListener('click', ()=> modal.close());
+    $('#btnExcluir').addEventListener('click', ()=>{
+      const id = $('#id').value; if(!id) return;
+      if(!confirm('Excluir este atendimento?')) return;
+      items = items.filter(i=>i.id!==id);
+      save(KEY, items); modal.close(); render();
+    });
+    $('#btnDuplicar').addEventListener('click', ()=>{
+      const id = $('#id').value; const base = items.find(i=>i.id===id); if(!base) return;
+      const cpy = JSON.parse(JSON.stringify(base)); cpy.id = uid(); cpy.createdAt=Date.now(); cpy.updatedAt=Date.now();
+      items.push(cpy); save(KEY, items); alert('Duplicado.'); modal.close(); render();
+    });
+
+    form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const sess = getSession();
+      const id = $('#id').value || uid();
+      const payload = {
+        id,
+        corretora: $('#corretora').value,
+        contato: $('#contato').value,
+        canal: $('#canal').value,
+        assunto: $('#assunto').value,
+        responsavel: $('#responsavel').value || (sess?.nome||''),
+        descricao: $('#descricao').value,
+        prioridade: $('#prioridade').value,
+        proximo: $('#proximo').value,
+        follow: $('#follow').value,
+        tags: ($('#tags').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+        sla: $('#sla').value,
+        status: $('#status').value || 'novo',
+        anexo: $('#anexo').value,
+        teamId: (document.getElementById('teamId')?.value || '') || undefined,
+        ownerId: sess?.id,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      const i = items.findIndex(x=>x.id===$('#id').value);
+      if(i>=0){ items[i] = { ...items[i], ...payload, id: items[i].id, createdAt: items[i].createdAt, updatedAt: Date.now() }; }
+      else { items.push(payload); }
+      save(KEY, items);
+      modal.close();
+      render();
+    });
+
+    // ===== Toolbar & export/import =====
+    $('#search').addEventListener('input', render);
+    $('#filterPrioridade').addEventListener('change', render);
+    $('#filterResponsavel').addEventListener('change', render);
+    $('#btnExemplo').addEventListener('click', ()=>{
+      if(!listaCorretoras.length){
+        listaCorretoras = [{nome:'Protegendo Bem', cnpj:'12.345.678/0001-00'}, {nome:'Brokers United', cnpj:'98.765.432/0001-00'}];
+        saveListaCorretoras();
+      }
+      items.push({
+        id: uid(), corretora:'Protegendo Bem', contato:'Marina', canal:'WhatsApp', assunto:'Tabela comissão', responsavel:getSession()?.nome||'Admin',
+        descricao:'Alinhar nova política de comissão para 2026.', prioridade:'Média', status:'novo', tags:['comissão','policy'], createdAt:Date.now(), updatedAt:Date.now()
+      });
+      save(KEY, items); render();
+    });
+    $('#btnZerar').addEventListener('click', ()=>{ if(confirm('Apagar tudo?')){ items=[]; save(KEY, items); render(); } });
+    $('#btnExport').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify({items, users, teams, listaCorretoras}, null, 2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup.json'; a.click();
+    });
+    $('#btnExportCSV').addEventListener('click', ()=>{
+      const header = ['id','corretora','contato','canal','assunto','responsavel','descricao','prioridade','proximo','follow','tags','sla','status','anexo','teamId','ownerId'];
+      const rows = [header.join(',')].concat(items.map(it=> header.map(h=> JSON.stringify(it[h]??'')).join(',')));
+      const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'atendimentos.csv'; a.click();
+    });
+    $('#importFile').addEventListener('change', (ev)=>{
+      const f = ev.target.files?.[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = ()=>{
+        try{
+          const data = JSON.parse(r.result);
+          if(Array.isArray(data.items)) items = data.items;
+          if(Array.isArray(data.users)) users = data.users;
+          if(Array.isArray(data.teams)) teams = data.teams;
+          save(KEY, items); save(KEY_USERS, users); save(KEY_TEAMS, teams);
+          render();
+          alert('Importado com sucesso');
+        }catch(e){ alert('JSON inválido'); }
+      };
+      r.readAsText(f);
+    });
+
+    // ===== Inicialização =====
+    function applySessionVisibility(){
+      const isAdmin = session?.perfil==='admin';
+      $('#btnUsers').style.display = isAdmin? 'inline-block' : 'none';
+    }
+    applySessionVisibility();
+    render();
+  
+    // ===== View: Cards/List (sem alterar Kanban) =====
+    const KEY_VIEWMODE = 'kanban_viewmode_v1';
+    let viewMode = (localStorage.getItem(KEY_VIEWMODE) || 'kanban');
+    const btnViewCards = document.getElementById('btnViewCards');
+    const btnViewList  = document.getElementById('btnViewList');
+    const boardNode    = document.getElementById('board');
+    const listNode     = document.getElementById('listView');
+
+    function setView(mode){
+      viewMode = mode;
+      try{ localStorage.setItem(KEY_VIEWMODE, mode); }catch(e){}
+      if(mode==='kanban'){
+        if(boardNode) boardNode.style.display = 'grid';
+        if(listNode)  listNode.style.display  = 'none';
+        btnViewCards?.classList.add('active'); btnViewList?.classList.remove('active');
+      }else{
+        if(boardNode) boardNode.style.display = 'none';
+        if(listNode)  listNode.style.display  = 'block';
+        btnViewList?.classList.add('active'); btnViewCards?.classList.remove('active');
+        renderList();
+      }
+    }
+    btnViewCards?.addEventListener('click', ()=> setView('kanban'));
+    btnViewList?.addEventListener('click',  ()=> setView('list'));
+    document.addEventListener('DOMContentLoaded', ()=> { setView(viewMode); bindLegendChips(); });
+
+    function getFilteredForList(){
+      const search = (document.getElementById('search')?.value || '').trim().toLowerCase();
+      const fPrio  = document.getElementById('filterPrioridade')?.value || '';
+      const fResp  = document.getElementById('filterResponsavel')?.value || '';
+      const fStat  = (document.getElementById('listFilterStatus')?.value || '').toLowerCase();
+      return getVisibleItems().filter(it =>{
+        const okSearch = (!search || matches(it, search));
+        const okPrio   = (!fPrio || it.prioridade===fPrio);
+        const okResp   = (!fResp || (it.responsavel||'')===fResp);
+        const okStat   = (!fStat || normStatus(it.status)===fStat);
+        return okSearch && okPrio && okResp && okStat;
+      });
+    }
+    let listSort = { key:'updatedAt', dir:'desc' };
+    function sortItems(arr, key, dir){
+      const sign = dir==='desc' ? -1 : 1;
+      return arr.slice().sort((a,b)=>{
+        const va = (a[key] ?? ''), vb = (b[key] ?? '');
+        if(key==='follow' || key==='createdAt' || key==='updatedAt'){
+          const da = va ? new Date(va).getTime() : 0;
+          const db = vb ? new Date(vb).getTime() : 0;
+          return (da < db ? -1 : da > db ? 1 : 0) * sign;
+        }
+        return String(va).localeCompare(String(vb), 'pt-BR', {numeric:true, sensitivity:'base'}) * sign;
+      });
+    }
+    
+    function normStatus(str){
+      const s = String(str||'novo').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // remove acentos
+      // normalizações comuns
+      if(s.includes('andament')) return 'andamento';
+      if(s.includes('progres'))  return 'progresso';
+      if(s.includes('aguard'))   return 'aguardo';
+      if(s.includes('conclu')||s.includes('fech')||s.includes('resol')) return 'concluido';
+      if(s.includes('cancel')||s.includes('erro')) return 'cancelado';
+      if(s.includes('novo')) return 'novo';
+      return s.replace(/[^a-z0-9]+/g,'-');
+    }
+    function labelFromStatus(s){
+      const map = {novo:'Novo', aguardo:'Aguardando retorno', andamento:'Em andamento', progresso:'Em progresso', concluido:'Concluído', fechado:'Fechado', resolvido:'Resolvido', cancelado:'Cancelado', erro:'Erro'};
+      return map[s] || (s.charAt(0).toUpperCase()+s.slice(1));
+    }
+
+    function teamNameById(id){
+      if(!id) return '';
+      const t = (typeof teams!=='undefined' ? teams.find(t=>t.id===id) : null);
+      return t ? t.nome : '';
+    }
+    function renderList(){
+      const tb = document.getElementById('tbodyList'); if(!tb) return;
+      const itemsFiltered = getFilteredForList();
+      const itemsSorted   = sortItems(itemsFiltered, listSort.key, listSort.dir);
+      tb.innerHTML = '';
+      const cnt = document.getElementById('listCount'); if(cnt) cnt.textContent = itemsSorted.length;
+      itemsSorted.forEach(it=>{
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-id', it.id);
+        const followTxt = it.follow ? fmtDate(it.follow) : '—';
+        const followTxtCreated = it.createdAt ? fmtDate(it.createdAt) : '—';
+        const equipe = teamNameById(it.teamId) || it.teamName || '—';
+        const stNorm = normStatus(it.status);
+        const statusClass = 'status-' + stNorm;
+        const statusLabel = labelFromStatus(stNorm);
+        tr.classList.add('tint-' + stNorm);
+        tr.innerHTML = `
+          <td title="${escapeHtml(it.assunto||'')}">${escapeHtml(it.assunto||'')}</td>
+          <td>${escapeHtml(it.corretora||'')}</td>
+          <td>${escapeHtml(it.contato||'')}</td>
+          <td>${escapeHtml(it.responsavel||'')}</td>
+          <td>${escapeHtml(it.prioridade||'Baixa')}</td>
+          <td>${followTxt}</td>
+          <td>${escapeHtml((it.status||'novo').replace(/^./, c=>c.toUpperCase()))}</td>
+          <td>${escapeHtml(equipe)}</td>
+          <td>
+            <button data-act="ver" data-id="${it.id}">Abrir</button>
+            <button data-act="avancar" data-id="${it.id}">Avançar</button>
+          </td>`;
+        tb.appendChild(tr);
+      });
+      tb.querySelectorAll('button[data-act="ver"]').forEach(b=> b.addEventListener('click', ()=> openModal(b.dataset.id)));
+      tb.querySelectorAll('button[data-act="avancar"]').forEach(b=> b.addEventListener('click', ()=> { advance(b.dataset.id); if(viewMode==='list') renderList(); }));
+    }
+    document.addEventListener('click', (ev)=>{
+      const th = ev.target.closest('th[data-k]');
+      if(!th || !th.closest('#tblList')) return;
+      const k = th.getAttribute('data-k');
+      if(listSort.key===k) listSort.dir = (listSort.dir==='asc' ? 'desc':'asc');
+      else { listSort.key = k; listSort.dir = 'asc'; }
+      if(viewMode==='list') renderList();
+    });
+    // Reagir a filtros/busca
+    ['search','filterPrioridade','filterResponsavel','listFilterStatus'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener('input',  ()=> { if(viewMode==='list') renderList(); });
+      el.addEventListener('change', ()=> { if(viewMode==='list') renderList(); });
+    });
+    // Manter lista atualizada quando Kanban re-renderiza (sem mexer em render())
+    const mo = new MutationObserver(()=> { if(viewMode==='list') renderList(); });
+    if(boardNode) mo.observe(boardNode, {childList:true, subtree:true});
+    // Atualiza também ao salvar no modal (hook não-invasivo)
+    document.addEventListener('submit', (e)=>{
+      if((e.target && e.target.id==='form') && viewMode==='list'){
+        setTimeout(()=> renderList(), 0);
+      }
+    });
+
+  
+    // Chips da legenda como filtro único
+    function bindLegendChips(){
+      const chips = document.querySelectorAll('#listView .legend .badge');
+      chips.forEach(ch => {
+        ch.addEventListener('click', () => {
+          const key = ch.dataset.k || '';
+          const sel = document.getElementById('listFilterStatus');
+          if(sel){ sel.value = key; }
+          chips.forEach(c=>c.classList.remove('active'));
+          if(key){ ch.classList.add('active'); }
+          if(viewMode==='list'){ renderList(); }
+        });
+      });
+    }
+
+  </script>
+
+<script>
+  // Override: safer deleteUser removes references in itens
+  window.deleteUser = function(id){
+    if(!confirm('Remover este usuário?')) return;
+    const u = (window.users||[]).find(x=>x.id===id);
+    window.users = (window.users||[]).filter(x=>x.id!==id);
+    window.items = (window.items||[]).map(it=>{
+      if(it.ownerId===id) it.ownerId = undefined;
+      if(u && it.responsavel===u.nome) it.responsavel = '';
+      return it;
+    });
+    localStorage.setItem('kanban_corretoras_v1', JSON.stringify(window.items||[]));
+    localStorage.setItem('kanban_users_v2', JSON.stringify(window.users||[]));
+    if(window.renderUsersList) window.renderUsersList(document.querySelector('#u_busca')?.value||'');
+    if(window.render) window.render();
+  };
+</script>
+
+</body>
+</html>
