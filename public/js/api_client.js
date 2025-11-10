@@ -1,97 +1,119 @@
-/**
- * api_client.js
- * Cliente de API para o front-end (Netlify Functions).
- * Ajustado para usar /.netlify/functions/* e tratar erros com detalhes.
- */
+<!-- public/js/api_client.js -->
+<script>
 (function(){
-  const API_BASE = window.API_BASE || '/.netlify/functions';
-  const USE_COOKIES = false; // true se sua API setar cookie de sessão
+  const API_BASE = (window.API_BASE || '/.netlify/functions').replace(/\/+$/,'');
+  const USE_COOKIES = false; // mude para true se a API usar cookie de sessão
 
-  async function responseToError(res){
-    let body = '';
-    try { body = await res.text(); } catch {}
-    const trimmed = (body || '').slice(0, 300);
-    const msg = `HTTP ${res.status} ${res.statusText}${trimmed ? ' – ' + trimmed : ''}`;
-    const err = new Error(msg);
-    err.status = res.status;
-    err.body = trimmed;
-    return err;
+  async function request(path, { method='GET', headers={}, body=null, credentials } = {}){
+    const url = path.startsWith('http') ? path : `${API_BASE}/${path.replace(/^\/+/,'')}`;
+    const opts = { method, headers: { ...headers }, body };
+    if (credentials || USE_COOKIES) opts.credentials = 'include';
+
+    if (body && !opts.headers['Content-Type']) {
+      opts.headers['Content-Type'] = 'application/json';
+    }
+
+    const res = await fetch(url, opts);
+    const ct = res.headers.get('content-type') || '';
+    const text = await res.text();
+
+    // tenta parsear JSON sempre que possível
+    let data = null;
+    if (ct.includes('application/json') || /^[\[\{]/.test(text.trim())){
+      try { data = JSON.parse(text); } catch {}
+    }
+
+    if (!res.ok) {
+      const msg = (data && (data.error || data.message)) ? (data.error || data.message) : text.slice(0,200);
+      const err = new Error(`HTTP ${res.status}: ${msg}`);
+      err.status = res.status;
+      err.body = text;
+      throw err;
+    }
+    return (data ?? text);
+  }
+
+  // ---------- AUTH ----------
+  async function login(email, pwd){
+    // tenta com "password"
+    try {
+      const out = await request('auth_login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password: pwd })
+      });
+      return out;
+    } catch (e) {
+      // fallback com "senha"
+      const out = await request('auth_login', {
+        method: 'POST',
+        body: JSON.stringify({ email, senha: pwd })
+      });
+      return out;
+    }
+  }
+  async function me(){ return await request('auth_me'); }
+  async function logout(){
+    await request('auth_logout', { method: 'POST' });
+    return true;
+  }
+
+  // ---------- USERS ----------
+  async function usersList(){ return await request('users_list'); }
+  async function usersInsert({ name, email, password, role='User' }){
+    return await request('users_insert', { method: 'POST', body: JSON.stringify({ name, email, password, role }) });
+  }
+  async function usersUpdate(payload){ // {id, name?, email?, role? ...}
+    return await request('users_update', { method: 'POST', body: JSON.stringify(payload) });
+  }
+  async function usersDelete({ id }){
+    return await request('users_delete', { method: 'POST', body: JSON.stringify({ id }) });
+  }
+
+  // ---------- CORRETORAS ----------
+  async function corretorasList(){ return await request('corretoras_list'); }
+  async function corretorasInsert(payload){
+    return await request('corretoras_insert', { method: 'POST', body: JSON.stringify(payload) });
+  }
+  async function corretorasUpdate(payload){
+    return await request('corretoras_update', { method: 'POST', body: JSON.stringify(payload) });
+  }
+  async function corretorasDelete({ id }){
+    return await request('corretoras_delete', { method: 'POST', body: JSON.stringify({ id }) });
+  }
+
+  // ---------- ATENDIMENTOS ----------
+  async function atendimentosList(){ return await request('atendimentos_list'); }
+  async function atendimentosInsert(payload){
+    return await request('atendimentos_insert', { method: 'POST', body: JSON.stringify(payload) });
+  }
+  async function atendimentosUpdate(payload){
+    return await request('atendimentos_update', { method: 'POST', body: JSON.stringify(payload) });
+  }
+  async function atendimentosDelete({ id }){
+    return await request('atendimentos_delete', { method: 'POST', body: JSON.stringify({ id }) });
+  }
+
+  // ---------- LEADS (se você usar no front) ----------
+  async function leadsList(){ return await request('leads_list'); }
+  async function leadsInsert(payload){
+    return await request('leads_insert', { method: 'POST', body: JSON.stringify(payload) });
   }
 
   const api = {
-    async login(email, senha){
-      // Fallback DEV aceito no backend: admin/admin
-      const res = await fetch(`${API_BASE}/auth_login`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        credentials: USE_COOKIES ? 'include' : 'same-origin',
-        body: JSON.stringify({ email, senha })
-      });
-      if (!res.ok) throw await responseToError(res);
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'Falha de login');
-      if (!data.token && !USE_COOKIES) throw new Error('Login OK, mas não veio token.');
-      return data;
-    },
-
-    async logout(){
-      const res = await fetch(`${API_BASE}/auth_logout`, {
-        method: 'POST',
-        credentials: USE_COOKIES ? 'include' : 'same-origin'
-      });
-      if (!res.ok) throw await responseToError(res);
-      return true;
-    },
-
-    // Exemplos de chamadas já compatíveis com suas funções existentes
-    async listarCorretoras(){
-      const res = await fetch(`${API_BASE}/corretoras_list`);
-      if (!res.ok) throw await responseToError(res);
-      return res.json();
-    },
-    async inserirCorretora(payload){
-      const res = await fetch(`${API_BASE}/corretoras_insert`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw await responseToError(res);
-      return res.json();
-    },
-    async atualizarCorretora(payload){
-      const res = await fetch(`${API_BASE}/corretoras_update`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw await responseToError(res);
-      return res.json();
-    },
-    async deletarCorretora(id){
-      const res = await fetch(`${API_BASE}/corretoras_delete`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ id })
-      });
-      if (!res.ok) throw await responseToError(res);
-      return res.json();
-    },
-    async listarLeads(){
-      const res = await fetch(`${API_BASE}/leads_list`);
-      if (!res.ok) throw await responseToError(res);
-      return res.json();
-    },
-    async inserirLead(payload){
-      const res = await fetch(`${API_BASE}/leads_insert`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw await responseToError(res);
-      return res.json();
-    }
+    // auth
+    login, me, logout,
+    // users
+    usersList, usersInsert, usersUpdate, usersDelete,
+    // corretoras
+    corretorasList, corretorasInsert, corretorasUpdate, corretorasDelete,
+    // atendimentos
+    atendimentosList, atendimentosInsert, atendimentosUpdate, atendimentosDelete,
+    // leads
+    leadsList, leadsInsert,
   };
 
-  // expõe globalmente
+  // expõe nos dois nomes para compatibilidade
+  window.API = api;
   window.api = api;
 })();
+</script>
