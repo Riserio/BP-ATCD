@@ -1,17 +1,9 @@
 [build]
+command = "npm i"
 publish = "."
 functions = "netlify/functions"
 
 [functions]
-external_node_modules = ["pg", "bcryptjs"]
+external_node_modules = ["pg", "bcryptjs", "uuid"]
 node_bundler = "esbuild"
-
-[[redirects]]
-from = "/.netli/functions
-to = "/'netlify/functions/:sssplat"
-status = 200
-
-[[redirects]]
-from = "/*"
-to = "/index.html"
-status = 200
+included_files = ["netlify/functions/**"]
