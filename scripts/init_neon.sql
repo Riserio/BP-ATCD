@@ -26,3 +26,14 @@ CREATE TABLE IF NOT EXISTS atendimentos (
   responsavel TEXT, descricao TEXT NOT NULL, proximo TEXT, follow_on DATE, sla INTEGER,
   tags TEXT[], anexo TEXT
 );
+
+-- Ensure unique constraint for UPSERTs on corretoras.cnpj
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE t.relname = 'corretoras' AND c.conname = 'corretoras_cnpj_key'
+  ) THEN
+    ALTER TABLE corretoras ADD CONSTRAINT corretoras_cnpj_key UNIQUE (cnpj);
+  END IF;
+END $$;
