@@ -1,16 +1,14 @@
-
 const { query, ensureSchema } = require('./_lib/db');
 
 exports.handler = async () => {
   try{
     await ensureSchema();
-    const { rows } = await query("SELECT key, value FROM settings");
+    const { rows } = await query("SELECT chave, valor FROM app_settings");
     const obj = {};
-    for(const r of rows){ obj[r.key] = r.value; }
-    // normalizar convenções usadas no adapter
+    for(const r of rows){ obj[r.chave] = r.valor; }
     return resp(200, {
-      logoUrl: (obj.brand && obj.brand.logoUrl) || obj.logoUrl || null,
-      themeVars: (obj.brand && obj.brand.themeVars) || obj.themeVars || null
+      logoUrl: obj.logoUrl || null,
+      themeVars: obj.themeVars || null
     });
   }catch(e){ return resp(500, { error: e.message }); }
 };

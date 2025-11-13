@@ -1,23 +1,24 @@
-
 const { query, ensureSchema } = require('./_lib/db');
+const { issueSession } = require('./_lib/auth');
 const crypto = require('crypto');
 
 exports.handler = async (event) => {
   try{
     await ensureSchema();
     const body = JSON.parse(event.body||'{}');
-    const { email, password } = body;
-    if(!email || !password) return resp(400, { error: 'email/password required' });
+    const email = (body.email || '').trim().toLowerCase();
+    const password = body.password || body.senha;
+    if(!email || !password) return resp(400, { ok:false, error: 'email/password required' });
 
     const ph = sha(password);
-    const { rows } = await query('SELECT id,name,email FROM users WHERE email=$1 AND password_hash=$2', [email, ph]);
-    if(!rows.length) return resp(401, { error: 'invalid credentials' });
+    const { rows } = await query('SELECT id, nome, email, perfil FROM usuarios WHERE email=$1 AND senha_hash=$2', [email, ph]);
+    if(!rows.length) return resp(401, { ok:false, error: 'invalid credentials' });
 
-    // simples token (não-JWT) para demo
-    const token = crypto.randomBytes(16).toString('hex');
-    return resp(200, { token, user: rows[0] });
+    const token = await issueSession(rows[0].id);
+    return resp(200, { ok:true, token, user: rows[0] });
   }catch(e){
-    return resp(500, { error: e.message });
+    const status = e.statusCode || 500;
+    return resp(status, { ok:false, error: e.message });
   }
 };
 
