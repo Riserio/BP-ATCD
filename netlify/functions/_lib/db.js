@@ -1,9 +1,8 @@
 // netlify/functions/_lib/db.js
-// Compatível com @netlify/neon + Netlify Functions
+// Compatível com @netlify/neon + Netlify DB
 
 const { neon } = require("@netlify/neon");
 
-// Cliente único reutilizado
 let sqlInstance = null;
 
 function getSql() {
@@ -15,10 +14,12 @@ function getSql() {
 
 async function query(text, params) {
   const sql = getSql();
+
   if (params && params.length) {
     const result = await sql(text, params);
     return { rows: result };
   }
+
   const result = await sql(text);
   return { rows: result };
 }
@@ -34,7 +35,6 @@ async function many(text, params) {
 }
 
 async function ensureSchema() {
-  // Mantido por compatibilidade
   return true;
 }
 
