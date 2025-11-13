@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   nome TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
   senha_hash TEXT NOT NULL,
-  perfil TEXT NOT NULL CHECK (perfil IN ('admin','comercial')),
+  perfil TEXT NOT NULL CHECK (perfil IN ('admin','comercial','lider')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ
 );
@@ -24,7 +24,22 @@ CREATE TABLE IF NOT EXISTS atendimentos (
   prioridade TEXT NOT NULL CHECK (prioridade IN ('Alta','Média','Baixa')),
   corretora TEXT NOT NULL, contato TEXT, canal TEXT, assunto TEXT NOT NULL,
   responsavel TEXT, descricao TEXT NOT NULL, proximo TEXT, follow_on DATE, sla INTEGER,
-  tags TEXT[], anexo TEXT
+  tags TEXT[], anexo TEXT, team_id TEXT
+);
+CREATE TABLE IF NOT EXISTS contatos (
+  id BIGSERIAL PRIMARY KEY,
+  nome TEXT NOT NULL,
+  email TEXT,
+  telefone TEXT,
+  corretora TEXT,
+  endereco TEXT,
+  instagram TEXT,
+  facebook TEXT,
+  linkedin TEXT,
+  site TEXT,
+  obs TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ
 );
 
 -- Ensure unique constraint for UPSERTs on corretoras.cnpj

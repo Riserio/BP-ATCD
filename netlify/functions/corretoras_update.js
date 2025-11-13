@@ -6,13 +6,27 @@ exports.handler = async (event) => {
     await ensureSchema();
     const p = JSON.parse(event.body||'{}');
     if(!p.id && !p.nome) return resp(400,{error:'id or nome required'});
+    const fields = [];
+    const values = [];
+    let idx = 1;
+    const updatables = ['nome','cnpj','telefone','email','responsavel'];
+    updatables.forEach((key)=>{
+      if(p[key] !== undefined){
+        fields.push(`${key}=$${idx++}`);
+        values.push(p[key]);
+      }
+    });
+    if(!fields.length) return resp(400,{error:'no fields to update'});
+    fields.push(`atualizado_em=NOW()`);
     if(p.id){
-      await query('UPDATE corretoras SET nome=COALESCE($1,nome), cnpj=COALESCE($2,cnpj) WHERE id=$3',[p.nome,p.cnpj,p.id]);
-      const { rows } = await query('SELECT * FROM corretoras WHERE id=$1',[p.id]);
+      values.push(p.id);
+      const sql = `UPDATE corretoras SET ${fields.join(', ')} WHERE id=$${idx} RETURNING *`;
+      const { rows } = await query(sql, values);
       return resp(200, rows[0]||{});
     }else{
-      await query('UPDATE corretoras SET cnpj=COALESCE($1,cnpj) WHERE nome=$2',[p.cnpj,p.nome]);
-      const { rows } = await query('SELECT * FROM corretoras WHERE nome=$1',[p.nome]);
+      values.push(p.nome);
+      const sql = `UPDATE corretoras SET ${fields.join(', ')} WHERE nome=$${idx} RETURNING *`;
+      const { rows } = await query(sql, values);
       return resp(200, rows[0]||{});
     }
   }catch(e){ return resp(500, { error: e.message }); }
