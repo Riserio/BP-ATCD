@@ -14,3 +14,8 @@
 - Dados ficam no `localStorage` do navegador.
 - Para rotas de SPA, `_redirects` já inclui fallback para `/index.html`.
 - Ajuste a imagem da logo trocando o arquivo no cabeçalho ou clicando na logo no app.
+
+### Login / usuário padrão
+- O backend (Netlify Functions + Neon) agora garante o schema automaticamente na primeira requisição.
+- Também é criado (uma única vez) um usuário admin padrão com `DEFAULT_ADMIN_EMAIL` / `DEFAULT_ADMIN_PASSWORD`.
+- Caso as variáveis não sejam definidas, o app usa `admin@bp.com` / `admin` apenas para bootstrapping. Altere-as no painel do Netlify e recrie o usuário, se necessário.
