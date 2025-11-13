@@ -756,6 +756,27 @@
         if (cur2 && [...selCtt.options].some(o => o.value === cur2)) selCtt.value = cur2;
       }
     }
+    async function loadCorretorasFromApi(){
+      if(!session?.token) return;
+      try{
+        const data = await apiRequest('corretoras_list');
+        listaCorretoras = Array.isArray(data) ? data.map(c=>({
+          id: c.id ?? c.ID ?? c.Id ?? c.uuid ?? c.codigo,
+          nome: c.nome || c.name || '',
+          cnpj: c.cnpj || c.CNPJ || ''
+        })) : [];
+        renderCorretorasSelect();
+        renderCorretorasTable($('#buscaCorretora')?.value || '');
+        const badge = document.getElementById('badgeCorretoras');
+        if(badge){
+          const base = 'Corretoras';
+          const count = listaCorretoras.length;
+          badge.textContent = count ? `${base} (${count})` : base;
+        }
+      }catch(e){
+        console.error('Erro ao carregar corretoras', e);
+      }
+    }
 
     // ===== Equipes (Teams) =====
     function renderLeadersOptions(selectEl){
