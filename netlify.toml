@@ -1,12 +1,5 @@
 [build]
-command = "npm i"
-publish = "."
-functions = "netlify/functions"
+  publish = "."
 
 [functions]
-external_node_modules = ["pg", "bcryptjs", "uuid"]
-node_bundler = "esbuild"
-included_files = ["netlify/functions/**"]
-
-[build.environment]
-NODE_VERSION = "20"
+  directory = "netlify/functions"

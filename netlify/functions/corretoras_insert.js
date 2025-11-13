@@ -1,14 +1,63 @@
+import { sql } from './db_client.js';
 
-const { query, ensureSchema } = require('./_lib/db');
-
-exports.handler = async (event) => {
-  try{
-    await ensureSchema();
-    const p = JSON.parse(event.body||'{}');
-    if(!p.nome) return resp(400,{error:'nome required'});
-    const { rows } = await query('INSERT INTO corretoras(nome,cnpj) VALUES($1,$2) ON CONFLICT (nome) DO UPDATE SET cnpj=EXCLUDED.cnpj RETURNING *',[p.nome,p.cnpj||null]);
-    return resp(200, rows[0]);
-  }catch(e){ return resp(500, { error: e.message }); }
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 };
 
-function resp(status, data){ return { statusCode: status, headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) }; }
+export const handler = async (event, context) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers, body: '' };
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
+  try {
+    const body = JSON.parse(event.body || '{}');
+    const { nome, cnpj, telefone, email, responsavel } = body;
+
+    if (!nome || !cnpj) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Campos nome e cnpj são obrigatórios.' })
+      };
+    }
+
+    // Se você já tiver UNIQUE(cnpj) criado na tabela,
+    // pode usar ON CONFLICT para evitar erro de duplicidade.
+    // Caso ainda não tenha, remova o bloco ON CONFLICT.
+    const result = await sql`
+      INSERT INTO corretoras (nome, cnpj, telefone, email, responsavel)
+      VALUES (${nome}, ${cnpj}, ${telefone}, ${email}, ${responsavel})
+      ON CONFLICT (cnpj) DO UPDATE
+      SET
+        nome = EXCLUDED.nome,
+        telefone = EXCLUDED.telefone,
+        email = EXCLUDED.email,
+        responsavel = EXCLUDED.responsavel,
+        atualizado_em = NOW()
+      RETURNING *
+    `;
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(result[0])
+    };
+  } catch (err) {
+    console.error('Erro em corretoras_insert:', err);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: err.message })
+    };
+  }
+};

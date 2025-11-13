@@ -15,7 +15,7 @@ exports.handler = async () => {
   const payload = {
     ok: dbOk,
     uptime_ms: Date.now() - started,
-    hasEnv: !!(process.env.NEON_DB_URL || process.env.DATABASE_URL),
+    hasEnv: !!(process.env.NETLIFY_DATABASE_URL || process.env.NEON_DB_URL || process.env.DATABASE_URL),
     now,
     dbError
   };

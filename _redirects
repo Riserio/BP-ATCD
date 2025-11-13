@@ -1,3 +1,6 @@
-/*  /index.html  200
+# Se quiser chamar as functions via /api/*
+/api/*   /.netlify/functions/:splat   200
 
-
+# Fallback para SPA (se você estiver usando index.html como app principal)
+# Se não quiser SPA, pode remover essa linha.
+/*       /index.html                  200

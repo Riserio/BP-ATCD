@@ -1,53 +1,63 @@
 // netlify/functions/_lib/db.js
-const { Client } = require('pg');
+// Adaptado para usar @netlify/neon (Netlify DB + Neon)
+// e manter a mesma interface (query, one, many, ensureSchema).
 
-let clientPromise;
+const { neon, neonConfig } = require('@netlify/neon');
+
+// Garante compatibilidade com node-postgres (rows, rowCount, etc.)
+neonConfig.fullResults = true;
+// Reaproveita conexões em ambiente serverless
+neonConfig.fetchConnectionCache = true;
+
+let sqlInstance;
 
 /**
- * Retorna (e mantém) um cliente conectado.
+ * Retorna (e mantém) uma instância de sql() já configurada.
+ * O @netlify/neon usa automaticamente a env NETLIFY_DATABASE_URL
+ * (criada pelo Netlify DB) – não é necessário passar connectionString.
  */
-async function getClient() {
-  const connectionString = process.env.NEON_DB_URL || process.env.DATABASE_URL;
-  if (!connectionString) throw new Error('NEON_DB_URL (ou DATABASE_URL) não definida');
-
-  if (!clientPromise) {
-    clientPromise = (async () => {
-      const client = new Client({
-        connectionString,
-        ssl: { rejectUnauthorized: false },
-      });
-      await client.connect();
-      return client;
-    })();
+function getSql() {
+  if (!sqlInstance) {
+    sqlInstance = neon();
   }
-  return clientPromise;
+  return sqlInstance;
 }
 
 /**
- * Compatível com 'pg': retorna um objeto com .rows, .rowCount, etc.
- * Ex.: const { rows } = await query('SELECT 1');
+ * query(text, params)
+ * text: string com SQL
+ * params: array de parâmetros opcionais
+ *
+ * Retorna um objeto no formato semelhante ao node-postgres,
+ * contendo .rows, .rowCount, etc.
  */
 async function query(text, params) {
-  const client = await getClient();
-  const res = await client.query(text, params);
-  return res; // <- mantém .rows, .rowCount, etc.
+  const sql = getSql();
+  if (params && params.length) {
+    return await sql(text, params);
+  }
+  return await sql(text);
 }
 
 /**
- * Conveniências (opcionais). Use se quiser.
+ * Retorna apenas uma linha (ou null).
  */
 async function one(text, params) {
   const { rows } = await query(text, params);
   return rows[0] || null;
 }
 
+/**
+ * Retorna apenas o array de linhas.
+ */
 async function many(text, params) {
   const { rows } = await query(text, params);
   return rows;
 }
 
 /**
- * Coloque aqui suas migrações/tabelas se as Functions chamam ensureSchema().
+ * Hook para migrações/DDL, se quiser.
+ * Neste projeto está como no-op, apenas retorna true.
  */
 async function ensureSchema() {
   // Exemplo (idempotente):
