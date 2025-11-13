@@ -23,7 +23,7 @@ exports.handler = async (event) => {
       params.push(body.email.trim().toLowerCase());
     }
     if(body.perfil || body.role){
-      const perfil = (body.perfil || body.role || '').toLowerCase();
+      const perfil = normalizePerfil(body.perfil || body.role || '');
       if(!['admin','comercial','lider'].includes(perfil)) return resp(400, { error: 'perfil inválido' });
       updates.push(`perfil=$${idx++}`);
       params.push(perfil);
@@ -44,6 +44,15 @@ exports.handler = async (event) => {
     return resp(status, { error: e.message });
   }
 };
+
+function normalizePerfil(value){
+  if(value === undefined || value === null) return '';
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
 
 function sha(s){ return crypto.createHash('sha256').update(s).digest('hex'); }
 function resp(status, data){ return { statusCode: status, headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) }; }

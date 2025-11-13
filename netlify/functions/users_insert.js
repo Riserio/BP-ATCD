@@ -10,7 +10,7 @@ exports.handler = async (event) => {
     const nome = (body.nome || body.name || '').trim();
     const email = (body.email || '').trim().toLowerCase();
     const password = body.password || body.senha;
-    const perfil = (body.perfil || body.role || 'comercial').toLowerCase();
+    const perfil = normalizePerfil(body.perfil || body.role || 'comercial');
     if(!nome || !email || !password) return resp(400, { error: 'nome/email/password required' });
     if(!['admin','comercial','lider'].includes(perfil)) return resp(400, { error: 'perfil inválido' });
     const ph = sha(password);
@@ -24,6 +24,15 @@ exports.handler = async (event) => {
     return resp(status, { error: e.message });
   }
 };
+
+function normalizePerfil(value){
+  if(value === undefined || value === null) return '';
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
 
 function sha(s){ return crypto.createHash('sha256').update(s).digest('hex'); }
 function resp(status, data){ return { statusCode: status, headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) }; }
