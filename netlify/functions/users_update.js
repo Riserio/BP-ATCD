@@ -24,7 +24,7 @@ exports.handler = async (event) => {
     }
     if(body.perfil || body.role){
       const perfil = (body.perfil || body.role || '').toLowerCase();
-      if(!['admin','comercial'].includes(perfil)) return resp(400, { error: 'perfil inválido' });
+      if(!['admin','comercial','lider'].includes(perfil)) return resp(400, { error: 'perfil inválido' });
       updates.push(`perfil=$${idx++}`);
       params.push(perfil);
     }

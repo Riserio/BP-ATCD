@@ -525,6 +525,8 @@
     const KEY_LOGO = 'kanban_logo_v1';
     const KEY_RESET = 'kanban_reset_tokens_v1';
     const KEY_CONTATOS = 'kanban_contatos_v1';
+    const KEY_USER_META = 'kanban_user_meta_v1';
+    const API_BASE = (window.API_BASE || '/.netlify/functions').replace(/\/+$/,'');
     const $ = s=>document.querySelector(s);
 
     const initialColumns = [
@@ -540,32 +542,54 @@
     function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
     function shorten(s, n){ s=s||''; return s.length>n? s.slice(0,n-1)+'…': s; }
     function fileToDataURL(file){ return new Promise((res)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(file); }); }
+    async function apiRequest(path, { method='GET', body=null, headers={}, auth=true } = {}){
+      const url = path.startsWith('http') ? path : `${API_BASE}/${path.replace(/^\/+/,'')}`;
+      const opts = { method, headers: { ...headers } };
+      if(body !== null && body !== undefined){
+        if(typeof body === 'string' || body instanceof FormData){ opts.body = body; }
+        else {
+          opts.body = JSON.stringify(body);
+          opts.headers['Content-Type'] = opts.headers['Content-Type'] || 'application/json';
+        }
+      }
+      if(auth && session?.token){ opts.headers['Authorization'] = `Bearer ${session.token}`; }
+      const res = await fetch(url, opts);
+      const text = await res.text();
+      let data = null;
+      if(text){ try{ data = JSON.parse(text); }catch{ data = text; } }
+      if(!res.ok){
+        const msg = (data && data.error) ? data.error : (typeof data === 'string' ? data.slice(0,200) : 'Falha na API');
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+    function withNumber(v){ const n = Number(v); return Number.isFinite(n) ? n : v; }
 
     // ===== Persistência =====
-    let items = load(KEY, []);
+    let items = [];
     const defaultColors = { novo:'#e0e7ff', andamento:'#dbeafe', aguardando:'#fff7ed', concluido:'#dcfce7' };
     let colors = load(KEY_COLORS, {});
-    let listaCorretoras = load(KEY_LISTA_CORRETORAS, []);
-    let users = load(KEY_USERS, []);
+    let listaCorretoras = [];
+    let users = [];
     let teams = load(KEY_TEAMS, []);
     let session = load(KEY_SESSION, null);
     let resetTokens = load(KEY_RESET, {});
-    let contatos = load(KEY_CONTATOS, []);
+    let contatos = [];
+    let userMeta = load(KEY_USER_META, {});
 
-    // Seed demo users/teams se vazio
-    if(!Array.isArray(users) || users.length===0){
-      const adminId = uid();
-      const liderId = uid();
-      const teamA = { id: uid(), nome:'Equipe Norte', liderId };
-      const teamB = { id: uid(), nome:'Equipe Sul', liderId };
-      users = [
-        { id: adminId, nome:'Administrador', email:'admin', senha:'admin', perfil:'admin' },
-        { id: liderId, nome:'Líder Exemplo', email:'lider@bp', senha:'123', perfil:'lider', teamIds:[teamA.id, teamB.id] },
-        { id: uid(), nome:'Vendedor', email:'vendedor@bp', senha:'123', perfil:'comercial', leaderId: liderId, teamIds:[teamA.id] },
-      ];
-      teams = [teamA, teamB];
-      save(KEY_USERS, users);
-      save(KEY_TEAMS, teams);
+    function persistUserMeta(){ save(KEY_USER_META, userMeta); }
+
+    // Dados agora são carregados via API Netlify/Neon
+    async function refreshAllData(){
+      if(!session?.token) return;
+      try{
+        await Promise.all([
+          loadCorretorasFromApi(),
+          loadUsersFromApi(),
+          loadAtendimentosFromApi(),
+          loadContatosFromApi()
+        ]);
+      }catch(e){ console.error('Falha ao sincronizar dados', e); }
     }
 
     // ===== Login / Sessão =====
@@ -575,8 +599,23 @@
     if(savedLogo){ loginLogo.src = savedLogo; loginLogo.style.display='block'; } else { loginLogo.style.display='none'; }
 
     function getSession(){ return session; }
-    function setSession(sess){ session = sess; save(KEY_SESSION, session); applySessionUI(); render(); }
-    function logout(){ setSession(null); showLogin(true); }
+    function setSession(sess){
+      session = sess ? { ...sess } : null;
+      save(KEY_SESSION, session);
+      if(!session){
+        items = [];
+        users = [];
+        listaCorretoras = [];
+        contatos = [];
+      }
+      applySessionUI();
+      render();
+    }
+    async function logout(){
+      try{ await apiRequest('auth_logout', { method:'POST' }); }catch(e){ console.warn('logout falhou', e); }
+      setSession(null);
+      showLogin(true);
+    }
     function showLogin(show){ loginWrap.style.display = show? 'grid':'none'; }
 
     function applySessionUI(){
@@ -611,17 +650,38 @@
       alert('Um e-mail foi preparado no seu cliente. Token salvo localmente para conferência (demo).');
     });
 
-    $('#btnLogin').addEventListener('click', ()=>{
+    $('#btnLogin').addEventListener('click', async ()=>{
       const email = $('#l_email').value.trim();
       const senha = $('#l_senha').value;
-      const u = users.find(x=>x.email===email && x.senha===senha);
-      if(!u){ alert('Credenciais inválidas'); return; }
-      setSession({ id:u.id, nome:u.nome, email:u.email, perfil:u.perfil });
-      showLogin(false);
+      if(!email || !senha){ alert('Informe e-mail e senha.'); return; }
+      try{
+        const data = await apiRequest('auth_login', { method:'POST', body:{ email, password: senha }, auth:false });
+        const normalized = { ...data.user, id: String(data.user.id), token: data.token };
+        setSession(normalized);
+        showLogin(false);
+        await refreshAllData();
+      }catch(e){
+        alert('Falha ao entrar: '+e.message);
+      }
     });
 
     $('#btnLogout').addEventListener('click', logout);
-    if(!session){ showLogin(true); } else { showLogin(false); }
+    if(!session?.token){
+      showLogin(true);
+    }else{
+      (async ()=>{
+        try{
+          const me = await apiRequest('auth_me');
+          setSession({ ...me.user, id: String(me.user.id), token: session.token });
+          await refreshAllData();
+          showLogin(false);
+        }catch(e){
+          console.warn('Sessão expirada', e);
+          setSession(null);
+          showLogin(true);
+        }
+      })();
+    }
 
     // ===== Logo editável =====
     const logoEl = $('#appLogo');
@@ -644,10 +704,10 @@
       const inp = document.getElementById('importCorretoras');
       if(inp) inp.click();
     });
-    document.getElementById('importCorretoras').addEventListener('change', (ev)=>{
+    document.getElementById('importCorretoras').addEventListener('change', async (ev)=>{
       const f = ev.target.files?.[0]; if(!f) return;
       const reader = new FileReader();
-      reader.onload = ()=>{
+      reader.onload = async ()=>{
         try{
           let data = [];
           if(f.name.toLowerCase().endsWith('.json')){
@@ -660,10 +720,13 @@
             }
           }
           if(Array.isArray(data)){
-            listaCorretoras = data.filter(x=>x && x.nome);
-            save(KEY_LISTA_CORRETORAS, listaCorretoras);
-            renderCorretorasSelect();
-            if(typeof renderCorretorasTable === 'function') renderCorretorasTable(document.getElementById('buscaCorretora')?.value||'');
+            const sanitized = data.filter(x=>x && x.nome);
+            for(const entry of sanitized){
+              try{
+                await apiRequest('corretoras_insert', { method:'POST', body: entry });
+              }catch(err){ console.warn('Falha ao importar corretora', entry, err); }
+            }
+            await loadCorretorasFromApi();
             alert('Lista de corretoras importada.');
           }else{
             alert('Formato inválido.');
@@ -672,7 +735,6 @@
       };
       reader.readAsText(f);
     });
-            function saveListaCorretoras(){ save(KEY_LISTA_CORRETORAS, listaCorretoras); }
     function renderCorretorasSelect(){
       const sel = document.getElementById('corretora');
       const selCtt = document.getElementById('ctt_corretora');
@@ -728,15 +790,33 @@
     function deleteTeam(id){
       if(!confirm('Remover esta equipe?')) return;
       teams = teams.filter(t=>t.id!==id);
-      // remover vínculo das pessoas
-      users = users.map(u=> ({...u, teamIds:(u.teamIds||[]).filter(tid=>tid!==id)}));
-      save(KEY_TEAMS, teams); save(KEY_USERS, users);
+      Object.keys(userMeta).forEach(uid=>{
+        const meta = userMeta[uid] || {};
+        if(Array.isArray(meta.teamIds)) meta.teamIds = meta.teamIds.filter(tid=>tid!==id);
+      });
+      persistUserMeta();
+      save(KEY_TEAMS, teams);
       renderTeamsList($('#t_busca').value);
       renderUsersList($('#u_busca').value);
       hydrateDynamicUserFields();
+      loadUsersFromApi();
     }
 
     // ===== Usuários =====
+    async function loadUsersFromApi(){
+      if(!session?.token) return;
+      try{
+        const data = await apiRequest('users_list');
+        users = (data||[]).map(u=>{
+          const meta = userMeta[String(u.id)] || {};
+          return { ...u, id: String(u.id), leaderId: meta.leaderId, teamIds: meta.teamIds || [] };
+        });
+        renderUsersList($('#u_busca')?.value || '');
+        hydrateDynamicUserFields();
+      }catch(e){
+        console.error('Erro ao carregar usuários', e);
+      }
+    }
     function hydrateDynamicUserFields(){
       const perfil = $('#u_perfil').value;
       // Mostrar combos conforme perfil
@@ -785,7 +865,7 @@
       $('#u_id').value = u.id;
       $('#u_nome').value = u.nome || '';
       $('#u_email').value = u.email || '';
-      $('#u_senha').value = u.senha || '';
+      $('#u_senha').value = '';
       $('#u_perfil').value = u.perfil || 'comercial';
       hydrateDynamicUserFields();
       if(u.perfil==='comercial' && u.leaderId) $('#u_lider').value = u.leaderId;
@@ -794,11 +874,14 @@
       const setSelected = new Set(u.teamIds||[]);
       [...teamsEl.options].forEach(o=> o.selected = setSelected.has(o.value));
     }
-    function deleteUser(id){
+    async function deleteUser(id){
       if(!confirm('Remover este usuário?')) return;
-      users = users.filter(u=>u.id!==id);
-      save(KEY_USERS, users);
-      renderUsersList($('#u_busca').value);
+      try{
+        await apiRequest('users_delete', { method:'POST', body:{ id: withNumber(id) } });
+        delete userMeta[id];
+        persistUserMeta();
+        await loadUsersFromApi();
+      }catch(e){ alert('Erro ao remover: '+e.message); }
     }
 
     // Toggle helpers
@@ -831,17 +914,17 @@
     $('#u_busca').addEventListener('input', e=> renderUsersList(e.target.value));
     document.getElementById('btnToggleUser').addEventListener('click', ()=> toggleSection('btnToggleUser','userFields'));
 
-    $('#btnSalvarUser').addEventListener('click', (e)=>{
+    $('#btnSalvarUser').addEventListener('click', async (e)=>{
       e.preventDefault();
-      const id = $('#u_id').value || uid();
+      const id = $('#u_id').value.trim();
       const nome = $('#u_nome').value.trim();
-      const email = $('#u_email').value.trim();
+      const email = $('#u_email').value.trim().toLowerCase();
       const senha = $('#u_senha').value;
       const perfil = $('#u_perfil').value;
-      if(!nome || !email || !senha){ alert('Preencha nome, e-mail e senha.'); return; }
+      if(!nome || !email){ alert('Preencha nome e e-mail.'); return; }
+      if(!id && !senha){ alert('Informe uma senha para novos usuários.'); return; }
 
-      // impedir e-mail duplicado
-      const collision = users.find(u=>u.email===email && u.id !== $('#u_id').value);
+      const collision = users.find(u=>u.email===email && u.id !== id);
       if(collision){ alert('Já existe usuário com este e-mail.'); return; }
 
       let leaderId = undefined;
@@ -850,24 +933,32 @@
         leaderId = $('#u_lider').value || undefined;
         if(!leaderId){ alert('Selecione o Líder do Comercial.'); return; }
       }
-      // Coletar teams selecionadas (líder e comercial podem ter múltiplas)
       const teamsEl = $('#u_teams');
       teamIds = [...teamsEl.selectedOptions].map(o=>o.value);
-
-      // Limpeza conforme perfil
       if(perfil==='admin'){ leaderId = undefined; teamIds = []; }
       if(perfil==='lider'){ leaderId = undefined; }
 
-      const exists = users.find(u=>u.id===id);
-      const payload = { id, nome, email, senha, perfil, leaderId, teamIds };
-      if(exists){
-        Object.assign(exists, payload);
-      }else{
-        users.push(payload);
+      try{
+        let userId = id;
+        if(id){
+          const payload = { id: withNumber(id), nome, email, perfil };
+          if(senha) payload.senha = senha;
+          await apiRequest('users_update', { method:'POST', body: payload });
+        }else{
+          const created = await apiRequest('users_insert', { method:'POST', body: { nome, email, perfil, senha } });
+          userId = String(created.id || created.ID || created?.user?.id || created?.user?.ID);
+          $('#u_id').value = userId;
+        }
+        if(userId){
+          userMeta[userId] = { leaderId, teamIds };
+          persistUserMeta();
+        }
+        await loadUsersFromApi();
+        renderUsersList($('#u_busca').value);
+        alert('Usuário salvo.');
+      }catch(err){
+        alert('Erro ao salvar usuário: '+err.message);
       }
-      save(KEY_USERS, users);
-      renderUsersList($('#u_busca').value);
-      alert('Usuário salvo.');
     });
 
     // ===== Modal Equipes =====
@@ -891,29 +982,48 @@
       if(exists){ Object.assign(exists, {nome, liderId}); }
       else { teams.push({id, nome, liderId}); }
       if(liderId){
-        const lider = users.find(u=>u.id===liderId);
-        if(lider){
-          const set = new Set(lider.teamIds||[]); set.add(id);
-          lider.teamIds = [...set];
-          save(KEY_USERS, users);
-        }
+        const meta = userMeta[liderId] || {};
+        const set = new Set(meta.teamIds||[]); set.add(id);
+        userMeta[liderId] = { ...meta, teamIds: [...set] };
+        persistUserMeta();
       }
       save(KEY_TEAMS, teams);
       renderTeamsList($('#t_busca').value);
       hydrateDynamicUserFields();
+      loadUsersFromApi();
       alert('Equipe salva.');
     });
 
     // ===== Contatos (ATUALIZADO) =====
+    function normalizeContato(row){
+      if(!row) return null;
+      return {
+        id: String(row.id),
+        nome: row.nome || '',
+        email: row.email || '',
+        tel: row.telefone || row.tel || '',
+        corretora: row.corretora || '',
+        endereco: row.endereco || '',
+        instagram: row.instagram || '',
+        facebook: row.facebook || '',
+        linkedin: row.linkedin || '',
+        site: row.site || '',
+        obs: row.obs || row.observacoes || ''
+      };
+    }
+    async function loadContatosFromApi(){
+      if(!session?.token) return;
+      try{
+        const data = await apiRequest('contatos_list');
+        contatos = (data||[]).map(normalizeContato).filter(Boolean);
+        renderContatosList($('#ctt_busca')?.value || '');
+      }catch(e){ console.error('Erro ao carregar contatos', e); }
+    }
     function linkChip(label, urlOrHandle){
       if(!urlOrHandle) return '';
       let url = urlOrHandle.trim();
       if(!url) return '';
-      if(url.startswith){  // safety if older engines
-        pass
-      }
-      const isHandle = url[0] === '@';
-      if(isHandle){
+      if(url.startsWith('@')){
         url = 'https://instagram.com/' + url.slice(1);
       }else if(!/^https?:\/\//i.test(url)){
         url = 'https://' + url;
@@ -931,8 +1041,9 @@
     $('#btnNovoContato').addEventListener('click', ()=> { $('#formContatos').reset(); });
     $('#ctt_busca').addEventListener('input', ()=> renderContatosList($('#ctt_busca').value));
     document.getElementById('btnToggleContato').addEventListener('click', ()=> toggleSection('btnToggleContato','contatoFields'));
-    $('#btnSalvarContato').addEventListener('click', (e)=>{
+    $('#btnSalvarContato').addEventListener('click', async (e)=>{
       e.preventDefault();
+      const id = $('#ctt_id').value.trim();
       const nome = $('#ctt_nome').value.trim();
       const email = $('#ctt_email').value.trim();
       const tel = $('#ctt_tel').value.trim();
@@ -944,10 +1055,13 @@
       const site = $('#ctt_site').value.trim();
       const obs = $('#ctt_obs').value.trim();
       if(!nome){ alert('Informe o nome do contato'); return; }
-      contatos.push({ id: uid(), nome, email, tel, corretora, endereco, instagram, facebook, linkedin, site, obs });
-      save(KEY_CONTATOS, contatos);
-      renderContatosList($('#ctt_busca').value);
-      alert('Contato salvo.');
+      const payload = { id: id? withNumber(id):undefined, nome, email, telefone: tel, corretora, endereco, instagram, facebook, linkedin, site, obs };
+      try{
+        await apiRequest('contatos_upsert', { method:'POST', body: payload });
+        await loadContatosFromApi();
+        $('#formContatos').reset();
+        alert('Contato salvo.');
+      }catch(err){ alert('Erro ao salvar contato: '+err.message); }
     });
 
     function renderContatosList(filterText=''){
@@ -976,50 +1090,16 @@
             <div><button data-del="${c.id}">Excluir</button></div>`;
           box.appendChild(div);
         });
-      box.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', ()=>{
+      box.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', async ()=>{
         if(!confirm('Excluir contato?')) return;
-        contatos = contatos.filter(x=>x.id!==b.dataset.del);
-        save(KEY_CONTATOS, contatos);
-        renderContatosList($('#ctt_busca').value);
+        try{
+          await apiRequest('contatos_delete', { method:'POST', body:{ id: withNumber(b.dataset.del) } });
+          await loadContatosFromApi();
+        }catch(err){ alert('Erro ao excluir: '+err.message); }
       }));
     }
 
-    // ===== Corretoras =====
-
-    // Importar lista de corretoras (CSV/JSON)
-    document.getElementById('btnImportCorretoras').addEventListener('click', ()=>{
-      const inp = document.getElementById('importCorretoras');
-      if(inp) inp.click();
-    });
-    document.getElementById('importCorretoras').addEventListener('change', (ev)=>{
-      const f = ev.target.files?.[0]; if(!f) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        try{
-          let data = [];
-          if(f.name.toLowerCase().endsWith('.json')){
-            data = JSON.parse(reader.result);
-          }else{
-            const rows = String(reader.result).split(/\r?\n/).filter(Boolean);
-            for(const r of rows){
-              const [nome,cnpj=''] = r.split(',').map(s=>s.trim());
-              if(nome) data.push({nome, cnpj});
-            }
-          }
-          if(Array.isArray(data)){
-            listaCorretoras = data.filter(x=>x && x.nome);
-            save(KEY_LISTA_CORRETORAS, listaCorretoras);
-            renderCorretorasSelect();
-            if(typeof renderCorretorasTable === 'function') renderCorretorasTable(document.getElementById('buscaCorretora')?.value||'');
-            alert('Lista de corretoras importada.');
-          }else{
-            alert('Formato inválido.');
-          }
-        }catch(e){ alert('Erro ao importar: '+e.message); }
-      };
-      reader.readAsText(f);
-    });
-            document.getElementById('btnToggleCorretora').addEventListener('click', ()=> toggleSection('btnToggleCorretora','corretoraFields'));
+    document.getElementById('btnToggleCorretora').addEventListener('click', ()=> toggleSection('btnToggleCorretora','corretoraFields'));
     $('#badgeCorretoras').addEventListener('click', ()=>{
       document.getElementById('modalCorretoras').showModal();
       renderCorretorasTable();
@@ -1028,24 +1108,27 @@
     $('#btnFecharCorretoras').addEventListener('click', ()=> document.getElementById('modalCorretoras').close());
     $('#buscaCorretora').addEventListener('input', ()=> renderCorretorasTable($('#buscaCorretora').value));
     $('#btnNovaCorretora').addEventListener('click', ()=> { $('#c_idx').value=''; $('#c_nome').value=''; $('#c_cnpj').value=''; });
-    $('#btnSalvarCorretora').addEventListener('click', (e)=>{
+    $('#btnSalvarCorretora').addEventListener('click', async (e)=>{
       e.preventDefault();
       const nome = $('#c_nome').value.trim(); if(!nome){ alert('Informe um nome'); return; }
       const cnpj = $('#c_cnpj').value.trim();
-      const idx = $('#c_idx').value;
-      if(idx){
-        const i = +idx; if(listaCorretoras[i]){ listaCorretoras[i].nome = nome; listaCorretoras[i].cnpj = cnpj; }
-      }else{
-        listaCorretoras.push({nome, cnpj});
-      }
-      saveListaCorretoras(); renderCorretorasTable($('#buscaCorretora').value); renderCorretorasSelect();
+      const id = $('#c_idx').value;
+      try{
+        if(id){
+          await apiRequest('corretoras_update', { method:'POST', body:{ id: withNumber(id), nome, cnpj } });
+        }else{
+          await apiRequest('corretoras_insert', { method:'POST', body:{ nome, cnpj } });
+        }
+        $('#c_idx').value=''; $('#c_nome').value=''; $('#c_cnpj').value='';
+        await loadCorretorasFromApi();
+        alert('Corretora salva.');
+      }catch(err){ alert('Erro ao salvar corretora: '+err.message); }
     });
     function renderCorretorasTable(filterText=''){
       const tb = document.getElementById('tbodyCorretoras'); if(!tb) return;
       const txt=(filterText||'').toLowerCase();
       tb.innerHTML = '';
       listaCorretoras
-        .map((c, i)=> ({...c, i}))
         .filter(c=> !txt || (c.nome||'').toLowerCase().includes(txt) || (c.cnpj||'').toLowerCase().includes(txt))
         .forEach(c=>{
           const tr = document.createElement('tr');
@@ -1053,22 +1136,66 @@
             <td style="padding:10px;border-bottom:1px solid #eef2ff">${escapeHtml(c.nome||'')}</td>
             <td style="padding:10px;border-bottom:1px solid #eef2ff">${escapeHtml(c.cnpj||'')}</td>
             <td style="padding:10px;border-bottom:1px solid #eef2ff;text-align:right">
-              <button data-edit="${c.i}">Editar</button>
-              <button data-del="${c.i}">Excluir</button>
+              <button data-edit="${c.id}">Editar</button>
+              <button data-del="${c.id}">Excluir</button>
             </td>`;
           tb.appendChild(tr);
         });
       tb.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{
-        const i = +b.dataset.edit; const c = listaCorretoras[i];
-        $('#c_idx').value=i; $('#c_nome').value=c?.nome||''; $('#c_cnpj').value=c?.cnpj||'';
+        const c = listaCorretoras.find(x=> String(x.id)===String(b.dataset.edit));
+        $('#c_idx').value=c?.id||''; $('#c_nome').value=c?.nome||''; $('#c_cnpj').value=c?.cnpj||'';
         ensureExpanded('btnToggleCorretora','corretoraFields',true);
       }));
-      tb.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', ()=>{
-        const i = +b.dataset.del;
+      tb.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', async ()=>{
         if(!confirm('Excluir corretora?')) return;
-        listaCorretoras.splice(i,1);
-        saveListaCorretoras(); renderCorretorasTable($('#buscaCorretora').value); renderCorretorasSelect();
+        try{
+          await apiRequest('corretoras_delete', { method:'POST', body:{ id: withNumber(b.dataset.del) } });
+          await loadCorretorasFromApi();
+        }catch(err){ alert('Erro ao excluir: '+err.message); }
       }));
+    }
+
+    function normalizeTags(value){
+      if(Array.isArray(value)) return value;
+      if(typeof value === 'string' && value){
+        try{
+          const parsed = JSON.parse(value);
+          if(Array.isArray(parsed)) return parsed;
+        }catch{}
+        return value.split(',').map(s=>s.trim()).filter(Boolean);
+      }
+      return [];
+    }
+    function normalizeAtendimento(row){
+      if(!row) return null;
+      return {
+        id: String(row.id),
+        corretora: row.corretora || '',
+        contato: row.contato || '',
+        canal: row.canal || '',
+        assunto: row.assunto || row.titulo || '',
+        responsavel: row.responsavel || '',
+        descricao: row.descricao || '',
+        prioridade: row.prioridade || 'Baixa',
+        proximo: row.proximo || '',
+        follow: row.follow_on || row.follow || '',
+        tags: normalizeTags(row.tags),
+        sla: row.sla || '',
+        status: row.status || 'novo',
+        anexo: row.anexo || '',
+        teamId: row.team_id || row.teamId || '',
+        ownerId: row.owner_id ? String(row.owner_id) : (row.ownerId ? String(row.ownerId) : ''),
+        createdAt: row.created_at || row.createdAt || Date.now(),
+        updatedAt: row.updated_at || row.updatedAt || Date.now(),
+      };
+    }
+    async function loadAtendimentosFromApi(){
+      if(!session?.token) return;
+      try{
+        const data = await apiRequest('atendimentos_list');
+        items = (data||[]).map(normalizeAtendimento).filter(Boolean);
+        render();
+      }catch(e){ console.error('Erro ao carregar atendimentos', e); }
     }
 
     // ===== Board / Kanban ===== (inalterado)
@@ -1210,8 +1337,19 @@
     function isOverdue(it){ if(!it.follow) return false; const d=new Date(it.follow); const t=new Date(); t.setHours(0,0,0,0); return d<t && it.status!=='concluido'; }
     function fmtDate(v){ try{ return new Date(v).toLocaleDateString('pt-BR') }catch{ return v } }
 
-    function moveTo(id,status){ const i=items.findIndex(x=>x.id===id); if(i<0) return; items[i].status=status; items[i].updatedAt=Date.now(); save(KEY, items); render(); }
-    function advance(id){ const order=['novo','andamento','aguardando','concluido']; const it=items.find(x=>x.id===id); if(!it) return; const idx=Math.min(order.indexOf(it.status)+1,order.length-1); it.status=order[idx]; it.updatedAt=Date.now(); save(KEY, items); render(); }
+    async function moveTo(id,status){
+      const item = items.find(x=>x.id===id); if(!item) return;
+      try{
+        await apiRequest('atendimentos_update', { method:'POST', body:{ id: withNumber(id), status } });
+        await loadAtendimentosFromApi();
+      }catch(e){ alert('Erro ao mover: '+e.message); }
+    }
+    async function advance(id){
+      const order=['novo','andamento','aguardando','concluido'];
+      const it=items.find(x=>x.id===id); if(!it) return;
+      const idx=Math.min(order.indexOf(it.status)+1,order.length-1);
+      await moveTo(id, order[idx]);
+    }
 
     // ===== Modal CRUD Atendimentos =====
     const modal = $('#modal'); const form = $('#form');
@@ -1271,25 +1409,10 @@
       modal.showModal();
     }
 
-    $('#btnCancelar').addEventListener('click', ()=> modal.close());
-    $('#btnExcluir').addEventListener('click', ()=>{
-      const id = $('#id').value; if(!id) return;
-      if(!confirm('Excluir este atendimento?')) return;
-      items = items.filter(i=>i.id!==id);
-      save(KEY, items); modal.close(); render();
-    });
-    $('#btnDuplicar').addEventListener('click', ()=>{
-      const id = $('#id').value; const base = items.find(i=>i.id===id); if(!base) return;
-      const cpy = JSON.parse(JSON.stringify(base)); cpy.id = uid(); cpy.createdAt=Date.now(); cpy.updatedAt=Date.now();
-      items.push(cpy); save(KEY, items); alert('Duplicado.'); modal.close(); render();
-    });
-
-    form.addEventListener('submit', (e)=>{
-      e.preventDefault();
+    function buildAtendimentoFromForm(){
       const sess = getSession();
-      const id = $('#id').value || uid();
-      const payload = {
-        id,
+      return {
+        id: $('#id').value || '',
         corretora: $('#corretora').value,
         contato: $('#contato').value,
         canal: $('#canal').value,
@@ -1303,35 +1426,103 @@
         sla: $('#sla').value,
         status: $('#status').value || 'novo',
         anexo: $('#anexo').value,
-        teamId: (document.getElementById('teamId')?.value || '') || undefined,
-        ownerId: sess?.id,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
+        teamId: document.getElementById('teamId')?.value || ''
       };
-      const i = items.findIndex(x=>x.id===$('#id').value);
-      if(i>=0){ items[i] = { ...items[i], ...payload, id: items[i].id, createdAt: items[i].createdAt, updatedAt: Date.now() }; }
-      else { items.push(payload); }
-      save(KEY, items);
-      modal.close();
-      render();
+    }
+    function toApiAtendimentoPayload(item, sess){
+      return {
+        id: item.id ? withNumber(item.id) : undefined,
+        corretora: item.corretora || '',
+        contato: item.contato || '',
+        canal: item.canal || '',
+        assunto: item.assunto || '',
+        responsavel: item.responsavel || (sess?.nome||''),
+        descricao: item.descricao || '',
+        prioridade: item.prioridade || 'Baixa',
+        proximo: item.proximo || '',
+        follow_on: item.follow || null,
+        tags: Array.isArray(item.tags) ? item.tags : [],
+        sla: item.sla ? Number(item.sla) : null,
+        status: item.status || 'novo',
+        anexo: item.anexo || '',
+        team_id: item.teamId || null,
+        owner_id: sess?.id ? withNumber(sess.id) : null
+      };
+    }
+
+    $('#btnCancelar').addEventListener('click', ()=> modal.close());
+    $('#btnExcluir').addEventListener('click', async ()=>{
+      const id = $('#id').value; if(!id) return;
+      if(!confirm('Excluir este atendimento?')) return;
+      try{
+        await apiRequest('atendimentos_delete', { method:'POST', body:{ id: withNumber(id) } });
+        modal.close();
+        await loadAtendimentosFromApi();
+      }catch(err){ alert('Erro ao excluir: '+err.message); }
+    });
+    $('#btnDuplicar').addEventListener('click', async ()=>{
+      const id = $('#id').value; const base = items.find(i=>i.id===id); if(!base) return;
+      const clone = { ...base, id: '' };
+      const sess = getSession();
+      try{
+        await apiRequest('atendimentos_insert', { method:'POST', body: toApiAtendimentoPayload(clone, sess) });
+        alert('Duplicado.');
+        modal.close();
+        await loadAtendimentosFromApi();
+      }catch(err){ alert('Erro ao duplicar: '+err.message); }
+    });
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const sess = getSession();
+      if(!sess){ alert('Sessão expirada. Faça login novamente.'); return; }
+      const item = buildAtendimentoFromForm();
+      try{
+        const body = toApiAtendimentoPayload(item, sess);
+        if(item.id){
+          body.id = withNumber(item.id);
+          await apiRequest('atendimentos_update', { method:'POST', body });
+        }else{
+          delete body.id;
+          await apiRequest('atendimentos_insert', { method:'POST', body });
+        }
+        modal.close();
+        await loadAtendimentosFromApi();
+      }catch(err){ alert('Erro ao salvar: '+err.message); }
     });
 
     // ===== Toolbar & export/import =====
     $('#search').addEventListener('input', render);
     $('#filterPrioridade').addEventListener('change', render);
     $('#filterResponsavel').addEventListener('change', render);
-    $('#btnExemplo').addEventListener('click', ()=>{
-      if(!listaCorretoras.length){
-        listaCorretoras = [{nome:'Protegendo Bem', cnpj:'12.345.678/0001-00'}, {nome:'Brokers United', cnpj:'98.765.432/0001-00'}];
-        saveListaCorretoras();
-      }
-      items.push({
-        id: uid(), corretora:'Protegendo Bem', contato:'Marina', canal:'WhatsApp', assunto:'Tabela comissão', responsavel:getSession()?.nome||'Admin',
-        descricao:'Alinhar nova política de comissão para 2026.', prioridade:'Média', status:'novo', tags:['comissão','policy'], createdAt:Date.now(), updatedAt:Date.now()
-      });
-      save(KEY, items); render();
+    $('#btnExemplo').addEventListener('click', async ()=>{
+      const sess = getSession(); if(!sess){ showLogin(true); return; }
+      try{
+        if(!listaCorretoras.length){
+          await apiRequest('corretoras_insert', { method:'POST', body:{ nome:'Protegendo Bem', cnpj:'12.345.678/0001-00' } });
+          await loadCorretorasFromApi();
+        }
+        await apiRequest('atendimentos_insert', {
+          method:'POST',
+          body: {
+            corretora:'Protegendo Bem', contato:'Marina', canal:'WhatsApp', assunto:'Tabela comissão',
+            responsavel: sess.nome,
+            descricao:'Alinhar nova política de comissão para 2026.', prioridade:'Média', status:'novo',
+            tags:['comissão','policy']
+          }
+        });
+        await loadAtendimentosFromApi();
+      }catch(err){ alert('Erro ao gerar exemplo: '+err.message); }
     });
-    $('#btnZerar').addEventListener('click', ()=>{ if(confirm('Apagar tudo?')){ items=[]; save(KEY, items); render(); } });
+    $('#btnZerar').addEventListener('click', async ()=>{
+      if(!confirm('Apagar tudo?')) return;
+      try{
+        for(const it of items){
+          await apiRequest('atendimentos_delete', { method:'POST', body:{ id: withNumber(it.id) } });
+        }
+        await loadAtendimentosFromApi();
+      }catch(err){ alert('Erro ao limpar: '+err.message); }
+    });
     $('#btnExport').addEventListener('click', ()=>{
       const blob = new Blob([JSON.stringify({items, users, teams, listaCorretoras}, null, 2)], {type:'application/json'});
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup.json'; a.click();
@@ -1345,14 +1536,25 @@
     $('#importFile').addEventListener('change', (ev)=>{
       const f = ev.target.files?.[0]; if(!f) return;
       const r = new FileReader();
-      r.onload = ()=>{
+      r.onload = async ()=>{
         try{
           const data = JSON.parse(r.result);
-          if(Array.isArray(data.items)) items = data.items;
-          if(Array.isArray(data.users)) users = data.users;
-          if(Array.isArray(data.teams)) teams = data.teams;
-          save(KEY, items); save(KEY_USERS, users); save(KEY_TEAMS, teams);
-          render();
+          const sess = getSession();
+          if(Array.isArray(data.listaCorretoras)){
+            for(const cor of data.listaCorretoras){
+              if(!cor?.nome) continue;
+              try{ await apiRequest('corretoras_insert', { method:'POST', body: cor }); }catch(e){ console.warn('falha corretora import', e); }
+            }
+            await loadCorretorasFromApi();
+          }
+          if(Array.isArray(data.items)){
+            for(const raw of data.items){
+              const mapped = normalizeAtendimento(raw) || raw;
+              try{ await apiRequest('atendimentos_insert', { method:'POST', body: toApiAtendimentoPayload(mapped, sess) }); }
+              catch(e){ console.warn('falha item import', e); }
+            }
+            await loadAtendimentosFromApi();
+          }
           alert('Importado com sucesso');
         }catch(e){ alert('JSON inválido'); }
       };

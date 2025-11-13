@@ -12,7 +12,7 @@ exports.handler = async (event) => {
     const password = body.password || body.senha;
     const perfil = (body.perfil || body.role || 'comercial').toLowerCase();
     if(!nome || !email || !password) return resp(400, { error: 'nome/email/password required' });
-    if(!['admin','comercial'].includes(perfil)) return resp(400, { error: 'perfil inválido' });
+    if(!['admin','comercial','lider'].includes(perfil)) return resp(400, { error: 'perfil inválido' });
     const ph = sha(password);
     const { rows } = await query(
       'INSERT INTO usuarios(nome,email,senha_hash,perfil) VALUES($1,$2,$3,$4) RETURNING id,nome,email,perfil,created_at',
