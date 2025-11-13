@@ -1,35 +1,25 @@
-import { sql } from './db_client.js';
+const { query, ensureSchema } = require('./_lib/db');
+const { requireAuth } = require('./_lib/http');
 
-const headers = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-};
-
-export const handler = async (event, context) => {
+exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers, body: '' };
   }
-
   try {
-    // Ajuste os campos conforme seu schema real de "usuarios"
-    const users = await sql`
-      SELECT id, nome, email, perfil, criado_em, atualizado_em
-      FROM usuarios
-      ORDER BY id ASC
-    `;
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify(users)
-    };
+    await ensureSchema();
+    await requireAuth(event, { adminOnly: true });
+    const { rows } = await query(
+      'SELECT id, nome, email, perfil, created_at, updated_at FROM usuarios ORDER BY id ASC'
+    );
+    return { statusCode: 200, headers, body: JSON.stringify(rows) };
   } catch (err) {
-    console.error('Erro em users_list:', err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: err.message })
-    };
+    const status = err.statusCode || 500;
+    return { statusCode: status, headers, body: JSON.stringify({ error: err.message }) };
   }
+};
+
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 };

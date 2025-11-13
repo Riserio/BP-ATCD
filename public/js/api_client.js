@@ -35,21 +35,10 @@
 
   // ---------- AUTH ----------
   async function login(email, pwd){
-    // tenta com "password"
-    try {
-      const out = await request('auth_login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password: pwd })
-      });
-      return out;
-    } catch (e) {
-      // fallback com "senha"
-      const out = await request('auth_login', {
-        method: 'POST',
-        body: JSON.stringify({ email, senha: pwd })
-      });
-      return out;
-    }
+    return await request('auth_login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password: pwd })
+    });
   }
   async function me(){ return await request('auth_me'); }
   async function logout(){

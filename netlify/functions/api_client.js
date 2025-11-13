@@ -19,13 +19,12 @@
   }
 
   const api = {
-    async login(email, senha){
-      // Fallback DEV aceito no backend: admin/admin
+    async login(email, password){
       const res = await fetch(`${API_BASE}/auth_login`, {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
         credentials: USE_COOKIES ? 'include' : 'same-origin',
-        body: JSON.stringify({ email, senha })
+        body: JSON.stringify({ email, password })
       });
       if (!res.ok) throw await responseToError(res);
       const data = await res.json();
