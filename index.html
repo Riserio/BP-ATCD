@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FILIAL ATCD – Corretoras</title>
+  <title>FILIAL ATCD</title>
   <style>
     :root{
       --brand:#2c50bb;
@@ -248,23 +248,15 @@
               <th data-k="responsavel">Responsável</th>
               <th data-k="retorno">Prioridade</th>
               <th data-k="status">Criado</th>
-              <th data-k="status">status</th>
-              <th data-k="status">equipe</th>
-              <th data-k="ações">ações</th>
+              <th data-k="status">Status</th>
+              <th data-k="status">Equipe</th>
+              <th data-k="ações">Ações</th>
             </tr>
           </thead>
           <tbody id="tbodyList"></tbody>
         </table>
       </div>
     </div>
-
-    <footer style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
-      <div class="toolbar">
-        <button id="btnExemplo" class="ghost">Carregar exemplos</button>
-        <button id="btnZerar" class="ghost" title="Apagar tudo">Limpar quadro</button>
-      </div>
-    </footer>
-  </div>
 
   <!-- Modal de Atendimentos -->
   <dialog id="modal">
@@ -528,6 +520,22 @@
     const KEY_USER_META = 'kanban_user_meta_v1';
     const API_BASE = (window.API_BASE || '/.netlify/functions').replace(/\/+$/,'');
     const $ = s=>document.querySelector(s);
+    // ===== Título dinâmico da página =====
+const APP_TITLE = 'FILIAL ATCD';
+
+function setPageTitle(section){
+  const map = {
+    login:              'Login',
+    atendimentos:       'Atendimentos',
+    atendimentos_lista: 'Atendimentos (Lista)',
+    usuarios:           'Usuários',
+    contatos:           'Contatos',
+    corretoras:         'Corretoras',
+    equipes:            'Equipes'
+  };
+  const suffix = map[section] || 'Atendimentos';
+  document.title = `${APP_TITLE} – ${suffix}`;
+}
 
     const initialColumns = [
       { key:'novo', title:'Novo' },
@@ -616,7 +624,15 @@
       setSession(null);
       showLogin(true);
     }
-    function showLogin(show){ loginWrap.style.display = show? 'grid':'none'; }
+    function showLogin(show){
+  loginWrap.style.display = show ? 'grid' : 'none';
+  if (show){
+    setPageTitle('login');
+  } else {
+    // quando sai do login, volta pro contexto padrão (kanban)
+    setPageTitle(viewMode === 'list' ? 'atendimentos_lista' : 'atendimentos');
+  }
+}
 
     function applySessionUI(){
       const isAdmin = session?.perfil==='admin';
@@ -927,8 +943,19 @@
     }
 
     // Handlers modal usuários
-    $('#btnUsers').addEventListener('click', ()=> { document.getElementById('modalUsers').showModal(); renderUsersList(); hydrateDynamicUserFields(); ensureExpanded('btnToggleUser','userFields',false); });
-    $('#btnFecharUsers').addEventListener('click', ()=> document.getElementById('modalUsers').close());
+    $('#btnUsers').addEventListener('click', ()=> { 
+  document.getElementById('modalUsers').showModal(); 
+  renderUsersList(); 
+  hydrateDynamicUserFields(); 
+  ensureExpanded('btnToggleUser','userFields',false);
+  setPageTitle('usuarios');
+});
+
+$('#btnFecharUsers').addEventListener('click', ()=> {
+  document.getElementById('modalUsers').close();
+  setPageTitle(viewMode === 'list' ? 'atendimentos_lista' : 'atendimentos');
+});
+
     $('#btnNovoUser').addEventListener('click', ()=> { $('#u_id').value=''; $('#formUser').reset(); hydrateDynamicUserFields(); });
     $('#u_perfil').addEventListener('change', hydrateDynamicUserFields);
     $('#u_lider').addEventListener('change', hydrateDynamicUserFields);
@@ -985,12 +1012,18 @@
     // ===== Modal Equipes =====
     document.getElementById('btnToggleTeam').addEventListener('click', ()=> toggleSection('btnToggleTeam','teamFields'));
     $('#btnTeamsModal').addEventListener('click', ()=>{
-      renderLeadersOptions($('#t_lider'));
-      renderTeamsList();
-      document.getElementById('modalTeams').showModal();
-      ensureExpanded('btnToggleTeam','teamFields',false);
-    });
-    $('#btnFecharTeams').addEventListener('click', ()=> document.getElementById('modalTeams').close());
+  renderLeadersOptions($('#t_lider'));
+  renderTeamsList();
+  document.getElementById('modalTeams').showModal();
+  ensureExpanded('btnToggleTeam','teamFields',false);
+  setPageTitle('equipes');
+});
+
+$('#btnFecharTeams').addEventListener('click', ()=> {
+  document.getElementById('modalTeams').close();
+  setPageTitle(viewMode === 'list' ? 'atendimentos_lista' : 'atendimentos');
+});
+
     $('#btnNovaTeam').addEventListener('click', ()=> { $('#t_id').value=''; $('#formTeams').reset(); renderLeadersOptions($('#t_lider')); });
     $('#t_busca').addEventListener('input', e=> renderTeamsList(e.target.value));
     $('#btnSalvarTeam').addEventListener('click', (e)=>{
@@ -1053,12 +1086,18 @@
     }
 
     $('#btnContatos').addEventListener('click', ()=>{
-      renderCorretorasSelect();
-      renderContatosList();
-      document.getElementById('modalContatos').showModal();
-      ensureExpanded('btnToggleContato','contatoFields',false);
-    });
-    $('#btnFecharContatos').addEventListener('click', ()=> document.getElementById('modalContatos').close());
+  renderCorretorasSelect();
+  renderContatosList();
+  document.getElementById('modalContatos').showModal();
+  ensureExpanded('btnToggleContato','contatoFields',false);
+  setPageTitle('contatos');
+});
+
+$('#btnFecharContatos').addEventListener('click', ()=> {
+  document.getElementById('modalContatos').close();
+  setPageTitle(viewMode === 'list' ? 'atendimentos_lista' : 'atendimentos');
+});
+
     $('#btnNovoContato').addEventListener('click', ()=> { $('#formContatos').reset(); });
     $('#ctt_busca').addEventListener('input', ()=> renderContatosList($('#ctt_busca').value));
     document.getElementById('btnToggleContato').addEventListener('click', ()=> toggleSection('btnToggleContato','contatoFields'));
@@ -1122,11 +1161,17 @@
 
     document.getElementById('btnToggleCorretora').addEventListener('click', ()=> toggleSection('btnToggleCorretora','corretoraFields'));
     $('#badgeCorretoras').addEventListener('click', ()=>{
-      document.getElementById('modalCorretoras').showModal();
-      renderCorretorasTable();
-      ensureExpanded('btnToggleCorretora','corretoraFields',false);
-    });
-    $('#btnFecharCorretoras').addEventListener('click', ()=> document.getElementById('modalCorretoras').close());
+  document.getElementById('modalCorretoras').showModal();
+  renderCorretorasTable();
+  ensureExpanded('btnToggleCorretora','corretoraFields',false);
+  setPageTitle('corretoras');
+});
+
+$('#btnFecharCorretoras').addEventListener('click', ()=> {
+  document.getElementById('modalCorretoras').close();
+  setPageTitle(viewMode === 'list' ? 'atendimentos_lista' : 'atendimentos');
+});
+
     $('#buscaCorretora').addEventListener('input', ()=> renderCorretorasTable($('#buscaCorretora').value));
     $('#btnNovaCorretora').addEventListener('click', ()=> { $('#c_idx').value=''; $('#c_nome').value=''; $('#c_cnpj').value=''; });
     $('#btnSalvarCorretora').addEventListener('click', async (e)=>{
@@ -1596,6 +1641,13 @@
     }
     applySessionVisibility();
     render();
+
+    // Título inicial conforme login/visualização
+if (!session?.token){
+  setPageTitle('login');
+} else {
+  setPageTitle(viewMode === 'list' ? 'atendimentos_lista' : 'atendimentos');
+}
   
     // ===== View: Cards/List (sem alterar Kanban) =====
     const KEY_VIEWMODE = 'kanban_viewmode_v1';
@@ -1606,19 +1658,23 @@
     const listNode     = document.getElementById('listView');
 
     function setView(mode){
-      viewMode = mode;
-      try{ localStorage.setItem(KEY_VIEWMODE, mode); }catch(e){}
-      if(mode==='kanban'){
-        if(boardNode) boardNode.style.display = 'grid';
-        if(listNode)  listNode.style.display  = 'none';
-        btnViewCards?.classList.add('active'); btnViewList?.classList.remove('active');
-      }else{
-        if(boardNode) boardNode.style.display = 'none';
-        if(listNode)  listNode.style.display  = 'block';
-        btnViewList?.classList.add('active'); btnViewCards?.classList.remove('active');
-        renderList();
-      }
-    }
+  viewMode = mode;
+  try{ localStorage.setItem(KEY_VIEWMODE, mode); }catch(e){}
+
+  if(mode==='kanban'){
+    if(boardNode) boardNode.style.display = 'grid';
+    if(listNode)  listNode.style.display  = 'none';
+    btnViewCards?.classList.add('active'); btnViewList?.classList.remove('active');
+    setPageTitle('atendimentos');
+  }else{
+    if(boardNode) boardNode.style.display = 'none';
+    if(listNode)  listNode.style.display  = 'block';
+    btnViewList?.classList.add('active'); btnViewCards?.classList.remove('active');
+    setPageTitle('atendimentos_lista');
+    renderList();
+  }
+}
+
     btnViewCards?.addEventListener('click', ()=> setView('kanban'));
     btnViewList?.addEventListener('click',  ()=> setView('list'));
     document.addEventListener('DOMContentLoaded', ()=> { setView(viewMode); bindLegendChips(); });
