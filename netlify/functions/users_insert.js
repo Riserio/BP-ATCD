@@ -11,8 +11,13 @@ exports.handler = async (event) => {
     const email = (body.email || '').trim().toLowerCase();
     const password = body.password || body.senha;
     const perfil = normalizePerfil(body.perfil || body.role || 'comercial');
-    if(!nome || !email || !password) return resp(400, { error: 'nome/email/password required' });
-    if(!['admin','comercial','lider'].includes(perfil)) return resp(400, { error: 'perfil inválido' });
+
+    if(!nome || !email || !password)
+      return resp(400, { error: 'nome/email/password required' });
+
+    if(!['admin','comercial','lider'].includes(perfil))
+      return resp(400, { error: 'perfil inválido' });
+
     const ph = sha(password);
     const { rows } = await query(
       'INSERT INTO usuarios(nome,email,senha_hash,perfil) VALUES($1,$2,$3,$4) RETURNING id,nome,email,perfil,created_at',
@@ -35,4 +40,10 @@ function normalizePerfil(value){
 }
 
 function sha(s){ return crypto.createHash('sha256').update(s).digest('hex'); }
-function resp(status, data){ return { statusCode: status, headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) }; }
+function resp(status, data){
+  return {
+    statusCode: status,
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify(data)
+  };
+}
