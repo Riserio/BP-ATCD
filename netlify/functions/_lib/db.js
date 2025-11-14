@@ -1,17 +1,40 @@
 // netlify/functions/_lib/db.js
-// Compatível com @netlify/neon + Netlify DB
+// Camada de acesso ao banco usando @netlify/neon
+// Expõe: query, one, many, ensureSchema
 
 const crypto = require('crypto');
-const { neon } = require("@netlify/neon");
+const { neon } = require('@netlify/neon');
 
 let sqlInstance = null;
 let schemaEnsured = false;
 
-const DEFAULT_ADMIN_EMAIL = (process.env.DEFAULT_ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'admin@bp.com').trim().toLowerCase();
-const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || 'admin';
-const DEFAULT_ADMIN_NAME = process.env.DEFAULT_ADMIN_NAME || 'Administrador ATCD';
+const DEFAULT_ADMIN_EMAIL = (
+  process.env.DEFAULT_ADMIN_EMAIL ||
+  process.env.ADMIN_EMAIL ||
+  'admin@bp.com'
+).trim().toLowerCase();
 
+const DEFAULT_ADMIN_PASSWORD =
+  process.env.DEFAULT_ADMIN_PASSWORD ||
+  process.env.ADMIN_PASSWORD ||
+  'admin';
+
+const DEFAULT_ADMIN_NAME =
+  process.env.DEFAULT_ADMIN_NAME ||
+  'Administrador ATCD';
+
+// Cria (ou reaproveita) instância do cliente SQL
+function getSql() {
+  if (!sqlInstance) {
+    // Usa automaticamente NETLIFY_DATABASE_URL
+    sqlInstance = neon();
+  }
+  return sqlInstance;
+}
+
+// Scripts de criação/ajuste de schema
 const schemaStatements = [
+  // Usuários
   `CREATE TABLE IF NOT EXISTS usuarios (
     id BIGSERIAL PRIMARY KEY,
     nome TEXT NOT NULL,
@@ -21,23 +44,49 @@ const schemaStatements = [
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ
   )`,
+
+  // Sessões (auth)
   `CREATE TABLE IF NOT EXISTS sessoes (
     token TEXT PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL
   )`,
+
+  // Configurações da aplicação
   `CREATE TABLE IF NOT EXISTS app_settings (
     chave TEXT PRIMARY KEY,
-    valor TEXT
+    valor JSONB
   )`,
+
+  // Corretoras (ajustado para bater com as Functions)
   `CREATE TABLE IF NOT EXISTS corretoras (
     id BIGSERIAL PRIMARY KEY,
     nome TEXT NOT NULL,
     cnpj TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ
+    telefone TEXT,
+    email TEXT,
+    responsavel TEXT,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    atualizado_em TIMESTAMPTZ
   )`,
+
+  // Garantir colunas extras se a tabela já existir
+  `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS telefone TEXT`,
+  `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS email TEXT`,
+  `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS responsavel TEXT`,
+  `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ`,
+  `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMPTZ`,
+
+  // Leads (para leads_insert / leads_list)
+  `CREATE TABLE IF NOT EXISTS leads (
+    id BIGSERIAL PRIMARY KEY,
+    nome TEXT NOT NULL,
+    email TEXT,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+
+  // Atendimentos (usado em atendimentos_* Functions)
   `CREATE TABLE IF NOT EXISTS atendimentos (
     id BIGSERIAL PRIMARY KEY,
     owner_id BIGINT,
@@ -58,6 +107,8 @@ const schemaStatements = [
     anexo TEXT,
     team_id TEXT
   )`,
+
+  // Contatos (para contatos_list / contatos_upsert / contatos_delete)
   `CREATE TABLE IF NOT EXISTS contatos (
     id BIGSERIAL PRIMARY KEY,
     nome TEXT NOT NULL,
@@ -72,71 +123,89 @@ const schemaStatements = [
     obs TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ
-  )`,
-  `DO $$ BEGIN
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_constraint c
-      JOIN pg_class t ON c.conrelid = t.oid
-      WHERE t.relname = 'corretoras' AND c.conname = 'corretoras_cnpj_key'
-    ) THEN
-      ALTER TABLE corretoras ADD CONSTRAINT corretoras_cnpj_key UNIQUE (cnpj);
-    END IF;
-  END $$;`
+  )`
 ];
 
-function getSql() {
-  if (!sqlInstance) {
-    sqlInstance = neon(); // usa NETLIFY_DATABASE_URL automaticamente
-  }
-  return sqlInstance;
-}
+// Executa o schema e garante admin
+async function ensureSchema() {
+  if (schemaEnsured) return;
 
-async function query(text, params) {
   const sql = getSql();
 
-  if (params && params.length) {
-    const result = await sql(text, params);
-    return { rows: result };
+  // Executa cada statement em sequência
+  for (const stmt of schemaStatements) {
+    if (!stmt || !stmt.trim()) continue;
+    await sql(stmt);
   }
 
-  const result = await sql(text);
-  return { rows: result };
+  // Garante que a coluna perfil exista e tenha o CHECK correto
+  await sql(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'usuarios' AND column_name = 'perfil'
+      ) THEN
+        ALTER TABLE usuarios
+          ADD COLUMN perfil TEXT NOT NULL DEFAULT 'comercial';
+      END IF;
+    END
+    $$;
+  `);
+
+  // Garante usuário admin padrão
+  await ensureDefaultAdmin();
+
+  schemaEnsured = true;
 }
 
-async function one(text, params) {
-  const { rows } = await query(text, params);
-  return rows[0] || null;
+// Cria usuário admin se não existir
+async function ensureDefaultAdmin() {
+  const { rows } = await query(
+    'SELECT id FROM usuarios WHERE email = $1 LIMIT 1',
+    [DEFAULT_ADMIN_EMAIL]
+  );
+  if (rows.length) return;
+
+  const hash = sha(DEFAULT_ADMIN_PASSWORD);
+  await query(
+    `INSERT INTO usuarios (nome, email, senha_hash, perfil)
+     VALUES ($1, $2, $3, 'admin')`,
+    [DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_EMAIL, hash]
+  );
+
+  console.log(
+    '[DB] Usuário admin criado:',
+    DEFAULT_ADMIN_EMAIL,
+    '(senha padrão configurada em variáveis ou "admin")'
+  );
 }
 
-async function many(text, params) {
+// Wrapper de query para ter interface estilo "pg"
+async function query(text, params = []) {
+  const sql = getSql();
+  // @netlify/neon suporta sql(queryText, params[])
+  const rows = await sql(text, params);
+  return { rows };
+}
+
+// Helpers convenientes
+async function many(text, params = []) {
   const { rows } = await query(text, params);
   return rows;
 }
 
-async function ensureSchema() {
-  if (schemaEnsured) return true;
-  const sql = getSql();
-  for (const statement of schemaStatements) {
-    await sql(statement);
-  }
-  await seedDefaultAdmin(sql);
-  schemaEnsured = true;
-  return true;
+async function one(text, params = []) {
+  const { rows } = await query(text, params);
+  return rows[0] || null;
 }
 
-async function seedDefaultAdmin(sql){
-  if(!DEFAULT_ADMIN_EMAIL || !DEFAULT_ADMIN_PASSWORD) return;
-  const hash = sha(DEFAULT_ADMIN_PASSWORD);
-  await sql(
-    `INSERT INTO usuarios (nome,email,senha_hash,perfil)
-     VALUES ($1,$2,$3,'admin')
-     ON CONFLICT (email) DO NOTHING`,
-    [DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_EMAIL, hash]
-  );
-}
-
-function sha(value){
-  return crypto.createHash('sha256').update(String(value)).digest('hex');
+function sha(value) {
+  return crypto
+    .createHash('sha256')
+    .update(String(value))
+    .digest('hex');
 }
 
 module.exports = {
