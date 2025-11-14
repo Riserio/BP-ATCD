@@ -1222,17 +1222,24 @@
     // ===== Board / Kanban ===== (inalterado)
     const board = $('#board');
     function getVisibleItems(){
-      const sess = getSession();
-      if(!sess) return [];
-      if(sess.perfil === 'admin') return items;
-      if(sess.perfil === 'lider'){
-        const myTeams = new Set((users.find(u=>u.id===sess.id)?.teamIds)||[]);
-        return items.filter(it => (it.teamId && myTeams.has(it.teamId)) || (it.responsavel||'')===sess.nome || it.ownerId===sess.id );
-      }
-      const me = users.find(u=>u.id===sess.id);
-      const myTeams = new Set(me?.teamIds||[]);
-      return items.filter(it => it.ownerId===sess.id || (it.responsavel||'')===sess.nome || (it.teamId && myTeams.has(it.teamId)));
-    }
+  if (!Array.isArray(items)) return [];
+  const sess = getSession();
+  if (!sess) return items;
+
+  if (sess.perfil === 'admin') return items;
+
+  const me = (users || []).find(u => String(u.id) === String(sess.id));
+  const myTeams = new Set((me?.teamIds) || []);
+
+  return items.filter(it => {
+    const ownerId = String(it.ownerId || '');
+    const sessId  = String(sess.id || '');
+    const isOwner = ownerId && ownerId === sessId;
+    const isResp  = (it.responsavel || '') === (sess.nome || '');
+    const inTeam  = it.teamId && myTeams.has(it.teamId);
+    return isOwner || isResp || inTeam;
+  });
+}
 
     function render(){
       board.innerHTML = '';
