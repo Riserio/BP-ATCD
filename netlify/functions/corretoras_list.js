@@ -6,14 +6,23 @@ const headers = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 };
 
+// Garante a coluna 'potencial' (uma vez por cold start)
+let potencialColumnReady = false;
+async function ensurePotencialColumn() {
+  if (potencialColumnReady) return;
+  await sql`ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS potencial TEXT`;
+  potencialColumnReady = true;
+}
+
 export const handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers, body: '' };
   }
 
   try {
+    await ensurePotencialColumn();
     const corretoras = await sql`
-      SELECT id, nome, cnpj, telefone, email, responsavel, criado_em, atualizado_em
+      SELECT id, nome, cnpj, telefone, email, responsavel, potencial, criado_em, atualizado_em
       FROM corretoras
       ORDER BY criado_em DESC, id DESC
     `;

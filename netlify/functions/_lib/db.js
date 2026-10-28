@@ -86,6 +86,12 @@ const schemaStatements = [
   `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS responsavel TEXT`,
   `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ`,
   `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMPTZ`,
+  // Potencial comercial da corretora: alto | medio | baixo
+  `ALTER TABLE corretoras ADD COLUMN IF NOT EXISTS potencial TEXT`,
+  `ALTER TABLE corretoras DROP CONSTRAINT IF EXISTS corretoras_potencial_check`,
+  `ALTER TABLE corretoras
+     ADD CONSTRAINT corretoras_potencial_check
+     CHECK (potencial IS NULL OR potencial IN ('alto','medio','baixo'))`,
 
   // Garante UNIQUE em CNPJ para suportar ON CONFLICT (cnpj)
   `DO $$

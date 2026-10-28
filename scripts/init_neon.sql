@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS sessoes (
 CREATE TABLE IF NOT EXISTS app_settings (chave TEXT PRIMARY KEY, valor TEXT);
 CREATE TABLE IF NOT EXISTS corretoras (
   id BIGSERIAL PRIMARY KEY, nome TEXT NOT NULL, cnpj TEXT,
+  potencial TEXT CHECK (potencial IS NULL OR potencial IN ('alto','medio','baixo')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ
 );
 CREATE TABLE IF NOT EXISTS atendimentos (
