@@ -9,7 +9,8 @@ exports.handler = async (event) => {
     const fields = [];
     const values = [];
     let idx = 1;
-    const updatables = ['nome','cnpj','telefone','email','responsavel'];
+    if(p.potencial !== undefined) p.potencial = normPotencial(p.potencial);
+    const updatables = ['nome','cnpj','telefone','email','responsavel','potencial'];
     updatables.forEach((key)=>{
       if(p[key] !== undefined){
         fields.push(`${key}=$${idx++}`);
@@ -33,3 +34,12 @@ exports.handler = async (event) => {
 };
 
 function resp(status, data){ return { statusCode: status, headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) }; }
+
+function normPotencial(v){
+  const s = String(v ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if(!s) return null;
+  if(['alto','alta','a'].includes(s)) return 'alto';
+  if(['medio','media','m'].includes(s)) return 'medio';
+  if(['baixo','baixa','b'].includes(s)) return 'baixo';
+  return null;
+}
